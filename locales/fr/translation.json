@@ -1,0 +1,66 @@
+{
+  "home": {
+    "eyebrow": "Intelligence bancaire commerciale",
+    "headline_before": "Comprenez les",
+    "headline_em": "finances",
+    "headline_after": "de tout secteur en secondes.",
+    "subheadline": "Recherchez par code SIC ou nom d'organisation pour accéder aux données sectorielles, comparaisons et analyses de crédit.",
+    "searchPlaceholder": "Code SIC ou nom d'organisation…",
+    "search": "Rechercher"
+  },
+  "nav": {
+    "account": "Compte",
+    "login": "Se connecter",
+    "register": "S'inscrire",
+    "redeem": "Utiliser une invitation",
+    "profile": "Mon profil",
+    "logout": "Se déconnecter"
+  },
+  "plans": {
+    "label": "Tarification",
+    "title": "Choisissez votre forfait",
+    "days": "jours",
+    "month": "mois",
+    "custom": "Sur mesure",
+    "getStarted": "Commencer",
+    "trial": {
+      "tier": "Essai gratuit",
+      "desc": "Explorez SectorLens avec un accès limité. Aucune carte de crédit requise.",
+      "f1": "3 rapports sectoriels/mois",
+      "f2": "Top 5 entreprises par secteur",
+      "f3": "Métriques financières de base",
+      "cta": "Commencer l'essai"
+    },
+    "essential": {
+      "tier": "Essentiel",
+      "desc": "Pour les banquiers commerciaux et analystes individuels.",
+      "f1": "Rapports sectoriels illimités",
+      "f2": "Liste complète des organisations",
+      "f3": "Outil de comparaison",
+      "f4": "Export PDF/Excel"
+    },
+    "pro": {
+      "tier": "Professionnel",
+      "desc": "Pour les équipes bancaires avec des besoins d'analyse avancés.",
+      "f1": "Tout ce qui est dans Essentiel",
+      "f2": "Finances des entreprises privées",
+      "f3": "Données ONG et municipales",
+      "f4": "Modélisation des conditions de prêt",
+      "f5": "Accès API"
+    },
+    "enterprise": {
+      "tier": "Entreprise",
+      "desc": "Pour les banques et institutions financières. SSO, SLA et support dédié.",
+      "f1": "Tout ce qui est dans Professionnel",
+      "f2": "Intégration SSO / SAML",
+      "f3": "Ingestion de données personnalisée",
+      "f4": "Gestionnaire de compte dédié",
+      "cta": "Contacter les ventes"
+    }
+  },
+  "footer": {
+    "privacy": "Confidentialité",
+    "terms": "Conditions",
+    "contact": "Contact"
+  }
+}

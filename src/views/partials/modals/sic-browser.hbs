@@ -1,0 +1,132 @@
+{{!-- SIC Browser modal — loads SICs from /api/sics on open --}}
+<div class="modal-overlay"
+     :class="{open: modal==='sic-browser'}"
+     @click.self="modal=null"
+     x-data="sicBrowser()"
+     @open-sic-browser.window="openBrowser()">
+
+  <div class="modal" @click.stop style="max-width:620px;max-height:82vh;display:flex;flex-direction:column;">
+
+    <div class="modal-header" style="flex-shrink:0;">
+      <div>
+        <div class="modal-title">Browse SIC Codes</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
+          <span x-text="filtered.length"></span> of <span x-text="sics.length"></span> sectors
+        </div>
+      </div>
+      <button class="modal-close" @click="modal=null">×</button>
+    </div>
+
+    {{!-- Search box inside modal --}}
+    <div style="padding:12px 28px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <input type="text"
+             x-model="query"
+             @input="filterSics()"
+             placeholder="Filter by code or name… e.g. 6022 or bank"
+             style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);
+                    font-family:'DM Sans',sans-serif;font-size:13.5px;outline:none;
+                    background:var(--bg);color:var(--text);"
+             x-ref="searchInput">
+    </div>
+
+    {{!-- Loading state --}}
+    <div x-show="loading"
+         style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text-3);font-size:13px;">
+      Loading SIC codes…
+    </div>
+
+    {{!-- Scrollable list --}}
+    <div x-show="!loading" style="flex:1;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead style="position:sticky;top:0;z-index:2;">
+          <tr>
+            <th style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);
+                       font-weight:400;text-align:left;padding:8px 28px;border-bottom:1px solid var(--border);
+                       background:var(--bg-alt);">SIC</th>
+            <th style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);
+                       font-weight:400;text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);
+                       background:var(--bg-alt);">Sector Name</th>
+            <th style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);
+                       font-weight:400;text-align:right;padding:8px 28px;border-bottom:1px solid var(--border);
+                       background:var(--bg-alt);">Entities</th>
+            <th style="background:var(--bg-alt);border-bottom:1px solid var(--border);padding:8px 16px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="sic in filtered" :key="sic.sic_code">
+            <tr style="border-bottom:1px solid var(--border);"
+                @mouseenter="$el.style.background='var(--bg-alt)'"
+                @mouseleave="$el.style.background=''">
+              <td style="padding:11px 28px;">
+                <span style="font-family:'Cormorant Garant',serif;font-size:17px;font-weight:600;"
+                      x-text="sic.sic_code"></span>
+              </td>
+              <td style="padding:11px 12px;font-size:13.5px;color:var(--text);" x-text="sic.name"></td>
+              <td style="padding:11px 28px;text-align:right;font-size:12px;color:var(--text-3);"
+                  x-text="sic.entity_count > 0 ? sic.entity_count + ' orgs' : '—'"></td>
+              <td style="padding:8px 16px;text-align:right;">
+                <a :href="'/sector/' + sic.sic_code"
+                   @click="modal=null"
+                   class="btn btn-primary btn-sm"
+                   style="white-space:nowrap;text-decoration:none;">
+                  Search →
+                </a>
+              </td>
+            </tr>
+          </template>
+          <template x-if="!loading && filtered.length === 0">
+            <tr>
+              <td colspan="4" style="padding:32px;text-align:center;font-size:13px;color:var(--text-3);">
+                No SIC codes match "<span x-text="query"></span>"
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-footer" style="flex-shrink:0;border-top:1px solid var(--border);">
+      <button class="btn btn-outline btn-sm" @click="modal=null">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function sicBrowser() {
+  return {
+    sics:     [],
+    filtered: [],
+    query:    '',
+    loading:  false,
+
+    async openBrowser() {
+      // parent sectorApp sets modal
+      if (this.sics.length === 0) await this.loadSics();
+      this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus());
+    },
+
+    async loadSics() {
+      this.loading = true;
+      try {
+        const resp = await fetch('/api/sics');
+        const data = await resp.json();
+        this.sics     = data;
+        this.filtered = data;
+      } catch (e) {
+        console.warn('Could not load SIC codes', e);
+      }
+      this.loading = false;
+    },
+
+    filterSics() {
+      const q = this.query.toLowerCase().trim();
+      if (!q) { this.filtered = this.sics; return; }
+      this.filtered = this.sics.filter(s =>
+        s.sic_code.includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        (s.name_fr && s.name_fr.toLowerCase().includes(q))
+      );
+    },
+  };
+}
+</script>

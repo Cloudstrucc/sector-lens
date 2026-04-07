@@ -1,0 +1,66 @@
+{
+  "home": {
+    "eyebrow": "Commercial Banking Intelligence",
+    "headline_before": "Understand any sector's",
+    "headline_em": "financials",
+    "headline_after": "in seconds.",
+    "subheadline": "Search by SIC code or organization name to access sector benchmarks, peer comparisons and loan-ready analysis.",
+    "searchPlaceholder": "SIC code or organization name…",
+    "search": "Search"
+  },
+  "nav": {
+    "account": "Account",
+    "login": "Log In",
+    "register": "Register",
+    "redeem": "Redeem Invitation",
+    "profile": "My Profile",
+    "logout": "Log Out"
+  },
+  "plans": {
+    "label": "Pricing",
+    "title": "Choose your plan",
+    "days": "days",
+    "month": "month",
+    "custom": "Custom",
+    "getStarted": "Get Started",
+    "trial": {
+      "tier": "Free Trial",
+      "desc": "Explore SectorLens with limited access. No credit card required.",
+      "f1": "3 SIC sector reports/month",
+      "f2": "Top 5 companies per sector",
+      "f3": "Core financial metrics",
+      "cta": "Start Free Trial"
+    },
+    "essential": {
+      "tier": "Essential",
+      "desc": "For individual commercial bankers and analysts.",
+      "f1": "Unlimited sector reports",
+      "f2": "Full organization list",
+      "f3": "Compare tool",
+      "f4": "Export to PDF/Excel"
+    },
+    "pro": {
+      "tier": "Professional",
+      "desc": "For banking teams with advanced analysis needs.",
+      "f1": "Everything in Essential",
+      "f2": "Private company financials",
+      "f3": "NGO & municipal data",
+      "f4": "Loan term modelling",
+      "f5": "API access"
+    },
+    "enterprise": {
+      "tier": "Enterprise",
+      "desc": "For banks and financial institutions. SSO, SLAs, and dedicated support.",
+      "f1": "Everything in Professional",
+      "f2": "SSO / SAML integration",
+      "f3": "Custom data ingestion",
+      "f4": "Dedicated account manager",
+      "cta": "Contact Sales"
+    }
+  },
+  "footer": {
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact"
+  }
+}

@@ -1,0 +1,69 @@
+{{!-- FREE TRIAL --}}
+<div class="modal-overlay" :class="{open: modal==='trial'}" @click.self="modal=null">
+  <div class="modal" @click.stop>
+    <div class="modal-header">
+      <div class="modal-title">Start Your Free Trial</div>
+      <button class="modal-close" @click="modal=null">×</button>
+    </div>
+    <form action="/auth/register" method="POST">
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">14 days of full access. No credit card required.</p>
+        <div class="form-row">
+          <div class="form-group"><label>First Name</label><input type="text" name="first_name" required></div>
+          <div class="form-group"><label>Last Name</label><input type="text" name="last_name" required></div>
+        </div>
+        <div class="form-group"><label>Work Email</label><input type="email" name="email" required></div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" minlength="8" required>
+        </div>
+        <div class="form-group"><label>Institution</label><input type="text" name="institution" placeholder="First National Bank"></div>
+        <div class="form-group"><label>Job Title</label><input type="text" name="job_title" placeholder="Commercial Banking Officer"></div>
+        <div class="form-group"><label>Phone (optional)</label><input type="tel" name="phone" placeholder="+1 (555) 000-0000"></div>
+        <div class="form-group">
+          <label>Primary Use Case</label>
+          <select class="form-select" name="use_case">
+            <option>Loan underwriting</option>
+            <option>Sector benchmarking</option>
+            <option>Credit risk analysis</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <input type="hidden" name="locale" :value="window.SL_LOCALE||'en'">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" @click="modal=null">Cancel</button>
+        <button type="submit" class="btn btn-primary">Activate Trial</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{{!-- REDEEM INVITE --}}
+<div class="modal-overlay" :class="{open: modal==='redeem'}" @click.self="modal=null">
+  <div class="modal" @click.stop>
+    <div class="modal-header">
+      <div class="modal-title">Redeem Invitation</div>
+      <button class="modal-close" @click="modal=null">×</button>
+    </div>
+    <form action="/auth/invite/redeem" method="POST">
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">Enter your invitation code to access SectorLens.</p>
+        <div class="form-group">
+          <label>Invitation Code</label>
+          <input type="text" name="code" placeholder="XXXX-XXXX-XXXX" style="letter-spacing:2px;font-size:16px;text-align:center;" required>
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-direction:column;gap:0;">
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-bottom:20px;">Continue →</button>
+        <div class="invite-alt">
+          <p>Don't have an invitation code? Request one by pressing the button below.</p>
+          <form action="/auth/invite/request" method="POST" style="margin-top:8px;">
+            <input type="email" name="email" placeholder="your@email.com" style="width:100%;margin-bottom:8px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:13.5px;">
+            <button type="submit" class="btn btn-outline" style="width:100%;">Request Invite Code</button>
+          </form>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

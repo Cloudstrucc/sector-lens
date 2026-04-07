@@ -1,0 +1,47 @@
+<div class="page-body">
+  <div class="breadcrumb"><a href="/">Home</a> › <span>Search Results</span></div>
+  <h1 style="font-family:'Cormorant Garant',serif;font-size:24px;font-weight:600;margin-bottom:24px;">
+    Results for "{{query}}"
+  </h1>
+
+  {{#if sics.length}}
+  <div class="section-head"><h2>Sectors (SIC Codes)</h2></div>
+  <div class="peer-panel" style="margin-bottom:24px;">
+    <table>
+      <thead><tr><th>SIC Code</th><th>Sector Name</th><th>Entities</th></tr></thead>
+      <tbody>
+        {{#each sics}}
+        <tr>
+          <td><a class="org-link" href="/sector/{{sic_code}}">{{sic_code}}</a></td>
+          <td>{{name}}</td>
+          <td style="color:var(--text-3)">{{entity_count}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+
+  {{#if orgs.length}}
+  <div class="section-head"><h2>Organizations</h2></div>
+  <div class="peer-panel">
+    <table>
+      <thead><tr><th>Organization</th><th>Type</th><th>SIC</th><th>Ticker</th></tr></thead>
+      <tbody>
+        {{#each orgs}}
+        <tr>
+          <td><a class="org-link" href="/org/{{id}}">{{name}}</a></td>
+          <td><span class="badge-type {{typeBadgeClass type}}">{{type}}</span></td>
+          <td><a href="/sector/{{sic_code}}" style="color:var(--text-3);text-decoration:none;">{{sic_code}}</a></td>
+          <td style="color:var(--text-3)">{{#if ticker}}{{ticker}}{{else}}—{{/if}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{/if}}
+
+  {{#unless sics.length}}{{#unless orgs.length}}
+  <p style="color:var(--text-3);padding:32px 0;">No results found for "{{query}}". Try a SIC code like <a href="/sector/6022" style="color:var(--text)">6022</a>.</p>
+  {{/unless}}{{/unless}}
+</div>

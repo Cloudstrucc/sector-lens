@@ -1,0 +1,76 @@
+<div class="page-body">
+  <div class="breadcrumb">
+    <a href="/">Home</a> ›
+    <a href="/sector/{{sic}}">SIC {{sic}} — {{sector.name}}</a> ›
+    <span>All Organizations</span>
+  </div>
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;">
+    <h2 style="font-family:'Cormorant Garant',serif;font-size:22px;font-weight:600;">
+      Organizations — {{sector.name}}
+    </h2>
+  </div>
+
+  <form method="GET" action="/sector/{{sic}}/orgs" class="org-filter-bar">
+    <input type="text" name="search" value="{{search}}" placeholder="Search organization…">
+    <select class="filter-select" name="type" onchange="this.form.submit()">
+      <option value="">All types</option>
+      <option value="Public"   {{#if (eq type 'Public')}}selected{{/if}}>Public</option>
+      <option value="Private"  {{#if (eq type 'Private')}}selected{{/if}}>Private</option>
+      <option value="NGO"      {{#if (eq type 'NGO')}}selected{{/if}}>NGO / Non-profit</option>
+      <option value="Municipal"{{#if (eq type 'Municipal')}}selected{{/if}}>Municipal</option>
+    </select>
+    <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+    {{#if (or search type)}}
+    <a href="/sector/{{sic}}/orgs" class="btn btn-outline btn-sm">Clear</a>
+    {{/if}}
+    <span class="org-count" style="margin-left:auto;">{{total}} organizations</span>
+  </form>
+
+  <div class="peer-panel">
+    <table>
+      <thead>
+        <tr>
+          <th>Organization</th>
+          <th>Type</th>
+          <th>Ticker</th>
+          <th>Revenue</th>
+          <th>Net Income</th>
+          <th>Net Margin</th>
+          <th>Total Assets</th>
+          <th>D/E</th>
+        </tr>
+      </thead>
+      <tbody id="org-table-body">
+        {{#each orgs}}
+        <tr>
+          <td><a class="org-link" href="/org/{{id}}">{{name}}</a></td>
+          <td><span class="badge-type {{typeBadgeClass type}}">{{type}}</span></td>
+          <td style="color:var(--text-3)">{{#if ticker}}{{ticker}}{{else}}—{{/if}}</td>
+          <td>{{revenueFmt}}</td>
+          <td>{{netIncomeFmt}}</td>
+          <td>{{netMarginFmt}}</td>
+          <td>{{totalAssetsFmt}}</td>
+          <td>{{deFmt}}</td>
+        </tr>
+        {{else}}
+        <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-3);">No organizations found.</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  {{!-- Pagination --}}
+  {{#if (gt pages 1)}}
+  <div style="display:flex;justify-content:center;gap:6px;margin-top:20px;">
+    {{#each (range 1 pages)}}
+    <a href="/sector/{{../sic}}/orgs?page={{this}}&search={{../search}}&type={{../type}}"
+       style="padding:5px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;color:var(--text-2);text-decoration:none;
+              {{#if (eq this ../page)}}background:var(--text);color:#fff;{{/if}}">
+      {{this}}
+    </a>
+    {{/each}}
+  </div>
+  {{/if}}
+
+</div>

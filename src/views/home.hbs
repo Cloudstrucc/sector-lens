@@ -1,0 +1,113 @@
+{{!-- Auto-open modal from query param --}}
+{{#if authModal}}
+<script>document.addEventListener('alpine:init', () => { setTimeout(() => Alpine.store && (window.__sl_modal = '{{authModal}}'), 100); });</script>
+{{/if}}
+
+<div id="view-home">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">{{t "home.eyebrow"}}</div>
+    <h1 class="hero-title">{{t "home.headline_before"}} <em>{{t "home.headline_em"}}</em> {{t "home.headline_after"}}</h1>
+    <p class="hero-sub">{{t "home.subheadline"}}</p>
+
+    <form action="/search" method="GET" class="search-box">
+      <input type="text" name="q" placeholder="{{t 'home.searchPlaceholder'}}" autocomplete="off" required>
+      <button type="submit">{{t "home.search"}}</button>
+    </form>
+
+    <div class="search-hints">
+      <a href="/sector/6022" class="hint-chip">6022 — State Banks</a>
+      <a href="/sector/7372" class="hint-chip">7372 — Software</a>
+      <a href="/sector/5411" class="hint-chip">5411 — Grocery</a>
+      <a href="/sector/4911" class="hint-chip">4911 — Electric Utilities</a>
+      <a href="/sector/8062" class="hint-chip">8062 — Hospitals</a>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button @click="openSicBrowser()"
+              style="background:none;border:none;font-family:'DM Sans',sans-serif;font-size:12.5px;
+                     color:var(--text-3);cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+                     padding:4px 0;transition:color .15s;"
+              onmouseenter="this.style.color='var(--text)'"
+              onmouseleave="this.style.color='var(--text-3)'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+        </svg>
+        Browse all SIC codes
+      </button>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section class="plans-section">
+    <div class="section-label">{{t "plans.label"}}</div>
+    <div class="section-title">{{t "plans.title"}}</div>
+    <div class="plans-grid">
+
+      <div class="plan-card">
+        <div class="plan-tier">{{t "plans.trial.tier"}}</div>
+        <div class="plan-price">$0 <small>/ 14 {{t "plans.days"}}</small></div>
+        <div class="plan-desc">{{t "plans.trial.desc"}}</div>
+        <ul class="plan-features">
+          <li>{{t "plans.trial.f1"}}</li>
+          <li>{{t "plans.trial.f2"}}</li>
+          <li>{{t "plans.trial.f3"}}</li>
+        </ul>
+        <button class="plan-cta dark" @click="modal='trial'">{{t "plans.trial.cta"}}</button>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-tier">{{t "plans.essential.tier"}}</div>
+        <div class="plan-price">$149 <small>/ {{t "plans.month"}}</small></div>
+        <div class="plan-desc">{{t "plans.essential.desc"}}</div>
+        <ul class="plan-features">
+          <li>{{t "plans.essential.f1"}}</li>
+          <li>{{t "plans.essential.f2"}}</li>
+          <li>{{t "plans.essential.f3"}}</li>
+          <li>{{t "plans.essential.f4"}}</li>
+        </ul>
+        <button class="plan-cta light" @click="modal='register'">{{t "plans.getStarted"}}</button>
+      </div>
+
+      <div class="plan-card featured">
+        <div class="plan-tier">{{t "plans.pro.tier"}}</div>
+        <div class="plan-price">$349 <small>/ {{t "plans.month"}}</small></div>
+        <div class="plan-desc">{{t "plans.pro.desc"}}</div>
+        <ul class="plan-features">
+          <li>{{t "plans.pro.f1"}}</li>
+          <li>{{t "plans.pro.f2"}}</li>
+          <li>{{t "plans.pro.f3"}}</li>
+          <li>{{t "plans.pro.f4"}}</li>
+          <li>{{t "plans.pro.f5"}}</li>
+        </ul>
+        <button class="plan-cta dark" @click="modal='register'">{{t "plans.getStarted"}}</button>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-tier">{{t "plans.enterprise.tier"}}</div>
+        <div class="plan-price">{{t "plans.custom"}}</div>
+        <div class="plan-desc">{{t "plans.enterprise.desc"}}</div>
+        <ul class="plan-features">
+          <li>{{t "plans.enterprise.f1"}}</li>
+          <li>{{t "plans.enterprise.f2"}}</li>
+          <li>{{t "plans.enterprise.f3"}}</li>
+          <li>{{t "plans.enterprise.f4"}}</li>
+        </ul>
+        <button class="plan-cta light">{{t "plans.enterprise.cta"}}</button>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-logo">Sector<em>Lens</em></div>
+    <div class="footer-links">
+      <a href="#">{{t "footer.privacy"}}</a>
+      <a href="#">{{t "footer.terms"}}</a>
+      <a href="#">{{t "footer.contact"}}</a>
+    </div>
+    <div class="footer-copy">© 2025 SectorLens Inc.</div>
+  </footer>
+</div>

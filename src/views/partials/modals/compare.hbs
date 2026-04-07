@@ -1,0 +1,148 @@
+{{!-- Compare modal — state lives in sectorApp() on <body> --}}
+<div class="modal-overlay" :class="{open: modal==='compare'}" @click.self="modal=null">
+  <div class="modal modal-lg" @click.stop>
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Compare Your Client</div>
+        {{#if sector}}
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
+          Sector: {{sector.name}} ({{sic}}) · Values saved to organization profile
+        </div>
+        {{/if}}
+      </div>
+      <button class="modal-close" @click="modal=null" :disabled="compare.loading">×</button>
+    </div>
+
+    <div class="modal-body">
+
+      {{!-- Client name --}}
+      <div class="form-group">
+        <label>Client / Company Name</label>
+        <input type="text"
+               x-model="compare.clientName"
+               placeholder="e.g. Riverside Community Bank"
+               :disabled="compare.loading"
+               @keydown.enter="runCompare()">
+      </div>
+
+      {{!-- Error --}}
+      <div x-show="compare.error"
+           style="padding:10px 14px;background:#c8282812;border:1px solid #c8282830;border-radius:var(--r);
+                  font-size:13px;color:var(--neg);margin-bottom:14px;"
+           x-text="compare.error" x-transition></div>
+
+      {{!-- No metrics loaded --}}
+      <template x-if="compare.metrics.length === 0">
+        <p style="font-size:13px;color:var(--text-3);padding:16px 0;">
+          Navigate to a sector dashboard or KPI detail page first, then click ⊕ Compare.
+        </p>
+      </template>
+
+      <template x-if="compare.metrics.length > 0">
+        <div>
+          {{!-- ── Section 1: Sector KPI metrics ─────────────────────────────── --}}
+          <div style="font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+                      color:var(--text-3);margin-bottom:8px;">
+            Sector Metrics (used for benchmark comparison)
+          </div>
+          <div class="compare-header-row">
+            <span>Metric</span>
+            <span>Sector Median</span>
+            <span>Your Client</span>
+          </div>
+          <template x-for="(m, i) in compare.metrics" :key="i">
+            <div class="compare-row">
+              <div class="compare-label" x-text="m.label"></div>
+              <div class="compare-sector" x-text="m.sectorVal"></div>
+              <div class="compare-input-wrap">
+                <input type="text" :placeholder="m.sectorVal"
+                       x-model="m.clientVal" :disabled="compare.loading">
+              </div>
+            </div>
+          </template>
+
+          {{!-- ── Section 2: Chart fields (collapsed by default) ────────────── --}}
+          <div style="margin-top:16px;" x-data="{ open: false }">
+            <button type="button"
+                    @click="open = !open"
+                    style="font-size:12px;color:var(--text-2);background:none;border:none;
+                           cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;
+                           display:flex;align-items:center;gap:6px;">
+              <span x-text="open ? '▾' : '▸'"></span>
+              <span x-text="open ? 'Hide chart &amp; trend fields' : '＋ Add chart &amp; trend fields (Revenue, Net Income, Margins…)'"></span>
+            </button>
+
+            <div x-show="open" x-transition style="margin-top:10px;">
+              <div style="font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+                          color:var(--text-3);margin-bottom:8px;margin-top:4px;">
+                Financials for Charts &amp; Profile
+              </div>
+              <div style="font-size:11.5px;color:var(--text-3);margin-bottom:10px;line-height:1.5;">
+                These populate the Revenue trend chart, Margin chart, and KPI tiles on the profile page.
+                Enter any you have — leave the rest blank.
+              </div>
+              <template x-for="(cf, i) in compare.chartFields" :key="'cf'+i">
+                <div class="compare-row">
+                  <div class="compare-label" x-text="cf.label">
+                    <span style="font-size:10px;color:var(--text-3);display:block;"
+                          x-text="cf.hint"></span>
+                  </div>
+                  <div class="compare-sector" style="color:var(--text-3);font-size:11.5px;" x-text="cf.example"></div>
+                  <div class="compare-input-wrap">
+                    <input type="text" :placeholder="cf.example"
+                           x-model="cf.clientVal" :disabled="compare.loading">
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          {{!-- ── Section 3: Custom metrics ───────────────────────────────── --}}
+          <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:10px;">
+            <template x-for="(cm, i) in compare.custom" :key="'c'+i">
+              <div class="compare-row">
+                <input type="text" placeholder="Metric name" x-model="cm.label"
+                       :disabled="compare.loading"
+                       style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);
+                              font-size:13px;font-family:'DM Sans',sans-serif;width:100%;
+                              background:var(--bg);color:var(--text);">
+                <input type="text" placeholder="Sector value" x-model="cm.sectorVal"
+                       :disabled="compare.loading"
+                       style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--r);
+                              font-size:13px;text-align:right;font-family:'DM Sans',sans-serif;
+                              background:var(--bg);color:var(--text);">
+                <div class="compare-input-wrap">
+                  <input type="text" placeholder="Your value"
+                         x-model="cm.clientVal" :disabled="compare.loading">
+                </div>
+              </div>
+            </template>
+            <button class="add-metric-btn"
+                    @click="compare.custom.push({label:'', sectorVal:'', clientVal:''})"
+                    :disabled="compare.loading">
+              ＋ Add custom metric
+            </button>
+          </div>
+
+          <p style="font-size:11px;color:var(--text-3);margin-top:12px;line-height:1.5;">
+            Formats: <code style="font-size:10.5px;">$4.2B</code> &nbsp;
+            <code style="font-size:10.5px;">340M</code> &nbsp;
+            <code style="font-size:10.5px;">12.6%</code> &nbsp;
+            <code style="font-size:10.5px;">9.1×</code>
+          </p>
+        </div>
+      </template>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" @click="modal=null" :disabled="compare.loading">Cancel</button>
+      <button class="btn btn-primary"
+              @click="runCompare()"
+              :disabled="compare.metrics.length === 0 || compare.loading">
+        <span x-show="!compare.loading">Compare &amp; Save →</span>
+        <span x-show="compare.loading">Saving…</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,138 @@
+{{!-- Compare metrics for sectorApp().initCompare() --}}
+<script id="sl-compare-metrics" type="application/json">{{{compareMetrics}}}</script>
+<script id="sl-chart-revenue"   type="application/json">{{{chartRevenue}}}</script>
+<script id="sl-chart-margins"   type="application/json">{{{chartMargins}}}</script>
+
+{{!-- No x-data here — Alpine bindings fall through to sectorApp() on <body> --}}
+<div class="page-body">
+
+  <div class="breadcrumb">
+    <a href="/">Home</a> › <span>SIC {{sic}} — {{sector.name}}</span>
+  </div>
+
+  <div class="metrics-header">
+    <h2>Sector Overview</h2>
+    <span class="data-note">Median values · {{entityCount}} reporting entities · FY {{fy}}</span>
+  </div>
+
+  {{!-- KPI Grid — each tile links to its drill-down page --}}
+  <div class="kpi-grid">
+    {{#each kpis}}
+    <a href="/sector/{{../sic}}/metric/{{metric}}" class="kpi-card accent-{{trend}} kpi-card-link">
+      <div class="kpi-label">{{label}}</div>
+      <div class="kpi-value">{{value}}</div>
+      <div class="kpi-sub">{{sub}}</div>
+      <div class="kpi-delta {{trend}}">
+        {{#if (eq trend 'pos')}}↑{{else}}{{#if (eq trend 'neg')}}↓{{else}}—{{/if}}{{/if}}
+        <span style="font-weight:300;color:var(--text-3)">Sector Median</span>
+      </div>
+      <div class="kpi-expand">View detail →</div>
+    </a>
+    {{/each}}
+  </div>
+
+  {{!-- Charts --}}
+  <div class="charts-row">
+    <div class="chart-panel">
+      <div class="panel-title">Revenue vs Net Income <span>Top peers · $B</span></div>
+      <canvas id="revenueChart"></canvas>
+    </div>
+    <div class="chart-panel">
+      <div class="panel-title">Margin Profile <span>Sector median %</span></div>
+      <canvas id="marginChart"></canvas>
+    </div>
+  </div>
+
+  {{!-- Peer table --}}
+  <div class="peer-panel">
+    <div class="peer-panel-header">
+      <div class="peer-panel-title">Top Organizations by Revenue</div>
+      <a href="/sector/{{sic}}/orgs" class="btn btn-outline btn-sm">View All →</a>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Organization</th>
+          <th>Type</th>
+          <th>Revenue</th>
+          <th>Net Income</th>
+          <th>Gross Margin</th>
+          <th>Net Margin</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each companies}}
+        <tr>
+          <td><a class="org-link" href="/org/{{id}}">{{name}}</a></td>
+          <td><span class="badge-type {{typeBadgeClass type}}">{{type}}</span></td>
+          <td>{{revenueFmt}}</td>
+          <td>{{netIncomeFmt}}</td>
+          <td>{{grossMarginFmt}}</td>
+          <td>{{netMarginFmt}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+</div>{{!-- /.page-body --}}
+
+<script>
+// Re-initialise compare metrics whenever this page loads
+// (sectorApp is already running on <body>, we just refresh its data)
+document.addEventListener('DOMContentLoaded', function () {
+  // Trigger compare metrics reload on the live Alpine component
+  if (window.Alpine) {
+    const body = document.querySelector('body');
+    if (body && body._x_dataStack) {
+      const comp = body._x_dataStack[0];
+      if (comp && typeof comp.initCompare === 'function') comp.initCompare();
+    }
+  }
+
+  // ── Charts ─────────────────────────────────────────────────────────────────
+  const rData = JSON.parse(document.getElementById('sl-chart-revenue').textContent);
+  const mData = JSON.parse(document.getElementById('sl-chart-margins').textContent);
+  const dark   = document.documentElement.getAttribute('data-theme') === 'dark';
+  const grid   = dark ? '#252525' : '#f0f0f0';
+  const tick   = dark ? '#666'    : '#8a8a8a';
+  const legend = dark ? '#999'    : '#4a4a4a';
+
+  const rc = new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels: rData.labels,
+      datasets: [
+        { label: 'Revenue ($B)',    data: rData.revenues, backgroundColor: '#2563eb', borderRadius: 2 },
+        { label: 'Net Income ($B)', data: rData.netIncs,  backgroundColor: '#16a34a', borderRadius: 2 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { labels: { font: { family: 'DM Sans', size: 11 }, color: legend } } },
+      scales: {
+        x: { ticks: { font: { family: 'DM Sans', size: 10 }, color: tick }, grid: { display: false } },
+        y: { ticks: { font: { family: 'DM Sans', size: 10 }, color: tick }, grid: { color: grid } },
+      },
+    },
+  });
+  window.__slCharts.push(rc);
+
+  const mc = new Chart(document.getElementById('marginChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Gross Margin', 'Operating Margin', 'Net Margin'],
+      datasets: [{ data: [mData.gross, mData.operating, mData.net],
+        backgroundColor: ['#2563eb', '#d97706', '#16a34a'], borderWidth: 0, hoverOffset: 4 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true, cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 11 }, color: legend, padding: 16 } },
+        tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw + '%' } },
+      },
+    },
+  });
+  window.__slCharts.push(mc);
+});
+</script>

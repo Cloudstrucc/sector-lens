@@ -246,6 +246,39 @@ router.get('/ingest/status/:jobId', async (req, res) => {
 });
 
 /* GET /api/ingest/history — last 10 ingestion jobs */
+/* GET /api/ingest/ping — test outbound network connectivity from Azure */
+router.get('/ingest/ping', async (req, res) => {
+  const triggerKey = process.env.INGEST_TRIGGER_KEY;
+  const providedKey = req.headers['x-ingest-key'];
+  if (!req.session?.user && !(triggerKey && providedKey === triggerKey)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const axios = require('axios');
+  const userAgent = process.env.INGEST_USER_AGENT || 'SectorLens/1.0';
+  const tests = [
+    { name: 'SEC EDGAR tickers',    url: 'https://data.sec.gov/files/company_tickers_exchange.json' },
+    { name: 'SEC EDGAR submissions',url: 'https://data.sec.gov/submissions/CIK0000320193.json' },
+    { name: 'FDIC BankFind',        url: 'https://banks.fdic.gov/api/institutions?limit=1&output=json' },
+    { name: 'ProPublica 990',       url: 'https://projects.propublica.org/nonprofits/api/v2/search.json?q=hospital&page=0' },
+  ];
+
+  const results = {};
+  for (const t of tests) {
+    try {
+      const resp = await axios.get(t.url, {
+        headers: { 'User-Agent': userAgent },
+        timeout: 8000,
+        validateStatus: () => true,
+      });
+      results[t.name] = { status: resp.status, ok: resp.status < 400, bytes: JSON.stringify(resp.data).length };
+    } catch (e) {
+      results[t.name] = { status: 0, ok: false, error: e.message };
+    }
+  }
+  res.json({ userAgent, results });
+});
+
 router.get('/ingest/history', async (req, res) => {
   try {
     const history = await IngestService.getHistory(10);

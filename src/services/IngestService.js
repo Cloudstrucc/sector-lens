@@ -22,9 +22,13 @@ const SecEdgarAdapter        = require('./ingest/us/SecEdgarAdapter');
 const ProPublicaAdapter      = require('./ingest/us/ProPublicaAdapter');
 const OsfiAdapter            = require('./ingest/ca/OsfiAdapter');
 const StatCanAdapter         = require('./ingest/ca/StatCanAdapter');
+const BankOfCanadaAdapter    = require('./ingest/ca/BankOfCanadaAdapter');
 const CompaniesHouseAdapter  = require('./ingest/uk/CompaniesHouseAdapter');
 const EbaAdapter             = require('./ingest/eu/EbaAdapter');
+const EcbAdapter             = require('./ingest/eu/EcbAdapter');
 const OecdStatAdapter        = require('./ingest/oecd/OecdStatAdapter');
+const WorldBankAdapter       = require('./ingest/global/WorldBankAdapter');
+const GleifAdapter           = require('./ingest/global/GleifAdapter');
 const FmpAdapter             = require('./ingest/FmpAdapter');
 
 // ── Adapter registry ───────────────────────────────────────────────────────────
@@ -97,21 +101,60 @@ const ALL_ADAPTERS = [
     Factory:     EbaAdapter,
     defaultOpts: {},
   },
+  // ── Canada (enhanced) ─────────────────────────────────────────────────────
+  {
+    id:          'bank_of_canada',
+    name:        'Bank of Canada / Canadian Institutions',
+    countryCode: 'CA',
+    sics:        null,
+    priority:    8,
+    Factory:     BankOfCanadaAdapter,
+    defaultOpts: {},
+  },
+  // ── Europe (ECB) ──────────────────────────────────────────────────────────
+  {
+    id:          'ecb',
+    name:        'ECB European Institutions',
+    countryCode: 'EU',
+    sics:        null,
+    priority:    9,
+    Factory:     EcbAdapter,
+    defaultOpts: {},
+  },
+  // ── Global ────────────────────────────────────────────────────────────────
+  {
+    id:          'world_bank',
+    name:        'World Bank / Global Institutions',
+    countryCode: null,
+    sics:        null,
+    priority:    10,
+    Factory:     WorldBankAdapter,
+    defaultOpts: {},
+  },
+  {
+    id:          'gleif',
+    name:        'GLEIF Global LEI',
+    countryCode: null,
+    sics:        null,
+    priority:    11,
+    Factory:     GleifAdapter,
+    defaultOpts: {},
+  },
   // ── Pan-OECD ─────────────────────────────────────────────────────────────────
   {
     id:          'oecd_stat',
     name:        'OECD.Stat',
-    countryCode: null,   // all OECD members
+    countryCode: null,
     sics:        null,
-    priority:    8,
+    priority:    12,
     Factory:     OecdStatAdapter,
     defaultOpts: {},
   },
-  // ── Enrichment (runs last — needs entity records to exist) ────────────────────
+  // ── Enrichment (runs last) ────────────────────────────────────────────────
   {
     id:          'fmp',
     name:        'Financial Modeling Prep',
-    countryCode: null,   // multi-country
+    countryCode: null,
     sics:        null,
     priority:    99,
     Factory:     FmpAdapter,

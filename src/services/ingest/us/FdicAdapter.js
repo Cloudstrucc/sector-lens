@@ -5,97 +5,77 @@
  * Covers: All FDIC-insured US banks and savings institutions (SIC 6020, 6021, 6022)
  * API:    https://banks.fdic.gov/api
  * Auth:   None required
- * Limit:  No published limit — 200ms delay
+ * Note:   FDIC API returns UPPERCASE field names
  */
 
 const BaseAdapter = require('../BaseAdapter');
 
-const FDIC_BASE   = 'https://banks.fdic.gov/api';
-const SIC_MAP     = { '6020': '6020', '6021': '6021', '6022': '6022' };
-const FISCAL_YEAR = new Date().getFullYear() - 1;
-
-// FDIC field → our financials column mapping
-const FIN_MAP = {
-  asset:   'total_assets',
-  netinc:  'net_income',
-  intinc:  'revenue',       // Net interest income ≈ revenue for banks
-  nonii:   null,             // Non-interest income (supplemental)
-  dep:     null,             // Total deposits (balance sheet)
-  eq:      'shareholders_equity',
-  lnlsnet: null,             // Net loans
-  roa:     'roa',
-  roe:     'roe',
-  nim:     null,             // Net interest margin (stored as-is)
-  rbcrwaj: 'tier1_capital_ratio',
-  effratio:'efficiency_ratio',
-};
+const FDIC_BASE = 'https://banks.fdic.gov/api';
 
 class FdicAdapter extends BaseAdapter {
   constructor() {
-    super({ name: 'FDIC', countryCode: 'US', rateLimitMs: 200 });
+    super({ name: 'FDIC BankFind', countryCode: 'US', rateLimitMs: 250 });
   }
 
   async run(options = {}) {
-    const limit   = options.limit || 500;
-    const sicCode = options.sic   || null; // null = fetch all banking SICs
+    const limit   = options.limit   || 100;
+    const maxOrgs = options.maxOrgs || 500;
 
     this.progress('Starting FDIC BankFind ingestion…');
 
-    let totalOrgs = 0, totalFin = 0, errors = 0;
+    let totalOrgs = 0, totalFin = 0, errors = 0, offset = 0, hasMore = true;
 
-    // Fetch institutions — can filter by SIC if provided
-    let offset = 0;
-    let hasMore = true;
-
-    while (hasMore) {
+    while (hasMore && totalOrgs < maxOrgs) {
       const params = new URLSearchParams({
-        fields: 'name,cert,asset,repdte,stalp,stname,city,active',
-        limit:  String(limit),
-        offset: String(offset),
-        sort_by: 'asset',
+        fields:     'NAME,CERT,STALP,CITY,ASSET,REPDTE,ACTIVE,INSTCAT',
+        filters:    'ACTIVE:1',
+        limit:      String(Math.min(limit, maxOrgs - totalOrgs)),
+        offset:     String(offset),
+        sort_by:    'ASSET',
         sort_order: 'DESC',
-        output: 'json',
-        filters: 'active:1',
+        output:     'json',
       });
 
-      const data = await this.fetchWithRetry(`${FDIC_BASE}/institutions?${params}`);
-      if (!data || !data.data || !data.data.length) { hasMore = false; break; }
+      const resp = await this.fetchWithRetry(`${FDIC_BASE}/institutions?${params}`);
+      if (!resp?.data?.length) { hasMore = false; break; }
 
-      for (const item of data.data) {
-        const inst = item.data;
-        if (!inst || !inst.cert) continue;
+      for (const item of resp.data) {
+        // FDIC returns { data: { NAME, CERT, ... }, links: {...} }
+        const inst = item.data || item;
+        const cert = inst.CERT || inst.cert;
+        const name = inst.NAME || inst.name;
+        if (!cert || !name) continue;
+
+        // Map FDIC institution category to SIC
+        // INSTCAT: 1=NMB, 2=SMBL, 3=SMBF, 4=CU, 5=OI, 6=SB
+        const sic = this._instcatToSic(inst.INSTCAT || inst.instcat);
 
         try {
           const orgId = await this.upsertOrg({
-            name:         inst.name,
-            sic_code:     '6022',   // All FDIC-insured banks map to State Commercial Banks as default
+            name,
+            sic_code:     sic,
             type:         'Public',
             country_code: 'US',
-            state:        inst.stalp,
-            city:         inst.city,
-            source_id:    String(inst.cert),
+            state:        inst.STALP || inst.stalp || null,
+            city:         inst.CITY  || inst.city  || null,
+            source_id:    String(cert),
           });
 
-          // Fetch financials for this institution
-          const finData = await this._fetchFinancials(inst.cert);
-          if (finData) {
-            await this.upsertFinancials(orgId, finData);
-            totalFin++;
-          }
+          const fin = await this._fetchFinancials(cert);
+          if (fin) { await this.upsertFinancials(orgId, fin); totalFin++; }
 
           totalOrgs++;
+          if (totalOrgs % 50 === 0) {
+            this.progress(`Processed ${totalOrgs} FDIC institutions…`, { orgs: totalOrgs });
+          }
         } catch (err) {
           errors++;
-          this._log(`Error processing FDIC cert ${inst.cert}: ${err.message}`);
+          this._log(`Error on cert ${cert}: ${err.message}`);
         }
       }
 
-      this.progress(`Processed ${totalOrgs} institutions…`, { orgs: totalOrgs });
       offset  += limit;
-      hasMore  = data.data.length === limit;
-
-      // Respect a reasonable cap for seeding — full run gets everything
-      if (options.maxOrgs && totalOrgs >= options.maxOrgs) break;
+      hasMore  = resp.data.length === limit;
     }
 
     this.progress(`Complete — ${totalOrgs} orgs, ${totalFin} financials, ${errors} errors`);
@@ -104,35 +84,48 @@ class FdicAdapter extends BaseAdapter {
 
   async _fetchFinancials(cert) {
     const params = new URLSearchParams({
-      filters: `CERT:${cert}`,
-      fields:  'repdte,asset,netinc,intinc,nonii,dep,eq,lnlsnet,roa,roe,nim,rbcrwaj,effratio,nonix',
-      limit:   '4',
-      sort_by: 'repdte',
+      filters:    `CERT:${cert}`,
+      fields:     'REPDTE,ASSET,NETINC,INTINC,EQ,ROA,ROE,RBCRWAJ,EFFRATIO',
+      limit:      '1',
+      sort_by:    'REPDTE',
       sort_order: 'DESC',
-      output: 'json',
+      output:     'json',
     });
 
-    const data = await this.fetchWithRetry(`${FDIC_BASE}/financials?${params}`);
-    if (!data || !data.data || !data.data.length) return null;
+    const resp = await this.fetchWithRetry(`${FDIC_BASE}/financials?${params}`);
+    if (!resp?.data?.length) return null;
 
-    // Use most recent annual report
-    const raw = data.data[0]?.data;
+    const raw  = resp.data[0]?.data || resp.data[0];
     if (!raw) return null;
 
-    const year = raw.repdte ? parseInt(raw.repdte.substring(0, 4)) : FISCAL_YEAR;
+    const year = raw.REPDTE ? parseInt(String(raw.REPDTE).substring(0, 4))
+                            : new Date().getFullYear() - 1;
+
+    const toNum = (v) => this.parseNum(v);
 
     return {
       fiscal_year:         year,
       period_type:         'annual',
-      total_assets:        this.parseNum(raw.asset),
-      net_income:          this.parseNum(raw.netinc),
-      revenue:             this.parseNum(raw.intinc),
-      shareholders_equity: this.parseNum(raw.eq),
-      roa:                 this.parseNum(raw.roa),
-      roe:                 this.parseNum(raw.roe),
-      tier1_capital_ratio: this.parseNum(raw.rbcrwaj),
-      efficiency_ratio:    this.parseNum(raw.effratio),
+      total_assets:        toNum(raw.ASSET   || raw.asset),
+      net_income:          toNum(raw.NETINC  || raw.netinc),
+      revenue:             toNum(raw.INTINC  || raw.intinc),
+      shareholders_equity: toNum(raw.EQ      || raw.eq),
+      roa:                 toNum(raw.ROA     || raw.roa),
+      roe:                 toNum(raw.ROE     || raw.roe),
+      tier1_capital_ratio: toNum(raw.RBCRWAJ || raw.rbcrwaj),
+      efficiency_ratio:    toNum(raw.EFFRATIO|| raw.effratio),
     };
+  }
+
+  _instcatToSic(instcat) {
+    // 1 = National Member Bank → 6021
+    // 2 = State Member Bank    → 6022
+    // 3 = State Non-Member     → 6022
+    // 4 = Savings Institution  → 6035
+    // 5 = OCC Savings          → 6035
+    // 6 = Savings Bank         → 6020
+    const map = { 1: '6021', 2: '6022', 3: '6022', 4: '6035', 5: '6035', 6: '6020' };
+    return map[instcat] || '6022';
   }
 }
 

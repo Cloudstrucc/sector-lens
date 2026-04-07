@@ -208,7 +208,6 @@ const IngestService = {
   async _runJob(jobId, scope, options = {}) {
     console.log(`[IngestService] Job ${jobId} starting (scope: ${JSON.stringify(scope)})`);
 
-    // Determine which adapters to run
     const adapters = this._selectAdapters(scope);
 
     await db('ingest_jobs').where('job_id', jobId).update({
@@ -217,6 +216,18 @@ const IngestService = {
     });
 
     activeJobs.set(jobId, { status: 'running', adapters_done: 0, total: adapters.length });
+
+    let totalOrgs = 0, totalFin = 0, totalErrors = 0;
+
+    // When running a full sweep with SEC EDGAR, iterate by SIC for better coverage
+    const secEdgarIdx = adapters.findIndex(a => a.id === 'sec_edgar');
+    if (scope.type === 'all' && secEdgarIdx !== -1) {
+      const allSics = await db('sic_codes').pluck('sic_code');
+      adapters[secEdgarIdx] = {
+        ...adapters[secEdgarIdx],
+        defaultOpts: { ...adapters[secEdgarIdx].defaultOpts, sicList: allSics, maxOrgsPerSic: 25 },
+      };
+    }
 
     let totalOrgs = 0, totalFin = 0, totalErrors = 0;
 

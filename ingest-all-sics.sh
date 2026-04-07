@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_URL="${APP_URL:-https://sectorlens.cloudstrucc.com}"
+APP_URL="${APP_URL:-https://sectorlens-ccf5ca2c.azurewebsites.net}"
 INGEST_KEY="${INGEST_KEY:-}"
 DELAY="${DELAY:-30}"
 

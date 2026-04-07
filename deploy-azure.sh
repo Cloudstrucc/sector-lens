@@ -5,12 +5,16 @@ set -euo pipefail
 UPDATE_ONLY=false
 SETTINGS_ONLY=false
 RESET=false
+SEED_ONLY=false
+MIGRATE_ONLY=false
 
 for arg in "$@"; do
   case $arg in
     --update-only)   UPDATE_ONLY=true ;;
     --settings-only) SETTINGS_ONLY=true ;;
     --reset)         RESET=true ;;
+    --seed)          SEED_ONLY=true ;;
+    --migrate)       MIGRATE_ONLY=true ;;
     --help|-h)
       echo "Usage: ./deploy-azure.sh [OPTIONS]"
       echo ""
@@ -20,6 +24,8 @@ for arg in "$@"; do
       echo "  --settings-only  Update App Settings only (no code deploy)"
       echo "  --reset          FULL RESET: wipe SQLite DB, re-apply all env vars from .env,"
       echo "                   run fresh migrations + seed on next boot. Data will be LOST."
+      echo "  --seed           Run seed data on the live DB (upsert, no data lost)"
+      echo "  --migrate        Run DB migrations on the live DB (safe, idempotent)"
       echo "  -h, --help       Show this help"
       echo ""
       echo "Environment variable overrides:"
@@ -144,7 +150,17 @@ PLAN_NAME="${APP_NAME}-plan"
 
 # ── Show deployment plan ───────────────────────────────────────────────────────
 echo ""
-if $RESET; then
+if $SEED_ONLY; then
+  echo "  ┌─────────────────────────────────────┐"
+  echo "  │  MODE: Seed DB (upsert — safe)       │"
+  echo "  │  Existing data will NOT be wiped     │"
+  echo "  └─────────────────────────────────────┘"
+elif $MIGRATE_ONLY; then
+  echo "  ┌─────────────────────────────────────┐"
+  echo "  │  MODE: Run migrations only           │"
+  echo "  │  Schema changes applied in-place     │"
+  echo "  └─────────────────────────────────────┘"
+elif $RESET; then
   echo -e "  ┌──────────────────────────────────────────┐"
   echo -e "  │  ${RED}${BOLD}MODE: FULL RESET / REINSTALL${NC}              │"
   echo -e "  │  SQLite DB will be ${RED}DESTROYED${NC}              │"
@@ -177,6 +193,8 @@ echo ""
 $UPDATE_ONLY  && ! $EXISTING_APP && err "--update-only requires an existing app in $RESOURCE_GROUP"
 $SETTINGS_ONLY && ! $EXISTING_APP && err "--settings-only requires an existing app in $RESOURCE_GROUP"
 $RESET        && ! $EXISTING_APP && err "--reset requires an existing app. Run a normal deploy first."
+$SEED_ONLY     && ! $EXISTING_APP && err "--seed requires an existing app. Run a normal deploy first."
+$MIGRATE_ONLY  && ! $EXISTING_APP && err "--migrate requires an existing app. Run a normal deploy first."
 
 # ── Confirmation ───────────────────────────────────────────────────────────────
 if $RESET; then
@@ -240,6 +258,58 @@ read_setting() {
   # Return empty string — callers decide if empty is an error
   echo "$VALUE"
 }
+
+# ── Kudu command helper — runs Node.js on the live container via REST API ────────
+_kudu_run() {
+  local CMD="$1" LABEL="$2" KUDU_USER KUDU_PASS RESULT EXIT_CODE OUTPUT ERRORS
+  local KUDU_CREDS
+  KUDU_CREDS=$(az webapp deployment list-publishing-credentials \
+    --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" \
+    --query "{u:publishingUserName,p:publishingPassword}" -o tsv 2>/dev/null)
+  KUDU_USER=$(echo "$KUDU_CREDS" | awk '{print $1}')
+  KUDU_PASS=$(echo "$KUDU_CREDS" | awk '{print $2}')
+  info "$LABEL"
+  RESULT=$(curl -s -X POST \
+    -u "${KUDU_USER}:${KUDU_PASS}" \
+    -H "Content-Type: application/json" \
+    -d "{"command": "${CMD}", "dir": "/home/site/wwwroot"}" \
+    "https://${APP_NAME}.scm.azurewebsites.net/api/command" 2>/dev/null)
+  EXIT_CODE=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ExitCode',1))" 2>/dev/null || echo "1")
+  OUTPUT=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Output','').strip())" 2>/dev/null || echo "")
+  ERRORS=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Error','').strip())" 2>/dev/null || echo "")
+  [ -n "$OUTPUT" ] && echo "$OUTPUT"
+  [ -n "$ERRORS" ] && [ "$ERRORS" != "None" ] && warn "$ERRORS"
+  [ "$EXIT_CODE" != "0" ] && err "$LABEL failed (exit code $EXIT_CODE)"
+  log "$LABEL done"
+}
+
+# ── Migrate-only mode ─────────────────────────────────────────────────────────
+if $MIGRATE_ONLY; then
+  _kudu_run \
+    "node -e \"require('./src/config/database').runMigrations().then(()=>{console.log('done');process.exit(0)}).catch(e=>{console.error(e.message);process.exit(1)})\"" \
+    "Running DB migrations on live container"
+  echo ""
+  log "Migrations applied — no code deployed, no data changed."
+  echo ""
+  exit 0
+fi
+
+# ── Seed-only mode ────────────────────────────────────────────────────────────
+if $SEED_ONLY; then
+  echo ""
+  warn "This will UPSERT SIC codes and seed organizations into the LIVE database."
+  warn "Existing user accounts and financial data will NOT be deleted."
+  read -p "  Proceed? (y/N) " -n 1 -r; echo ""
+  [[ ! $REPLY =~ ^[Yy]$ ]] && { warn "Seed cancelled."; exit 0; }
+  echo ""
+  _kudu_run \
+    "node -e \"require('./src/config/database').runSeeds().then(()=>{console.log('done');process.exit(0)}).catch(e=>{console.error(e.message);process.exit(1)})\"" \
+    "Running seed upsert on live container (may take ~60s)"
+  echo ""
+  log "Seed complete — SIC codes and organizations upserted, no existing data deleted."
+  echo ""
+  exit 0
+fi
 
 # ── Settings-only mode ─────────────────────────────────────────────────────────
 if $SETTINGS_ONLY; then
@@ -611,7 +681,9 @@ echo "  Commands:"
 echo "  ─────────────────────────────────────────────────────────────"
 echo "  Redeploy code:    ./deploy-azure.sh --update-only"
 echo "  Update settings:  ./deploy-azure.sh --settings-only"
-echo "  Full reset:       ./deploy-azure.sh --reset"
+echo "  Seed data:        ./deploy-azure.sh --seed         (upsert SIC + orgs, safe)"
+echo "  Run migrations:   ./deploy-azure.sh --migrate      (schema changes only)"
+echo "  Full reset:       ./deploy-azure.sh --reset        (wipe DB + redeploy)"
 echo "  View logs:        az webapp log tail --name $APP_NAME -g $RESOURCE_GROUP"
 echo "  Restart app:      az webapp restart --name $APP_NAME -g $RESOURCE_GROUP"
 echo "  SSH into app:     az webapp ssh --name $APP_NAME -g $RESOURCE_GROUP"

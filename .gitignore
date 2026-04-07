@@ -37,3 +37,10 @@ Thumbs.db
 dist/
 build/
 .cache/
+# .gitattributes
+*.sh    text eol=lf
+*.js    text eol=lf
+*.hbs   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.env*  text eol=lf

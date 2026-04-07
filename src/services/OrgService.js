@@ -6,17 +6,15 @@ const { fmt } = require('./SectorService');
 const OrgService = {
 
   async listBySIC(sic, { search = '', type = '', page = 1, perPage = 25 } = {}) {
-    // Join to the most recent financials for each org (any period type)
     let q = db('organizations as o')
-      .join('financials as f', function () {
-        this.on('o.id', '=', 'f.org_id')
-            .andOn('f.id', '=',
-              db.raw(`(SELECT id FROM financials
-                        WHERE org_id = o.id
-                          AND period_type IN ('annual','manual')
-                        ORDER BY fiscal_year DESC,
-                          CASE period_type WHEN 'annual' THEN 0 ELSE 1 END
-                        LIMIT 1)`));
+      .leftJoin('financials as f', function () {
+        this.on('f.id', '=',
+          db.raw(`(SELECT id FROM financials
+                    WHERE org_id = o.id
+                      AND period_type IN ('annual','manual')
+                    ORDER BY fiscal_year DESC,
+                      CASE period_type WHEN 'annual' THEN 0 ELSE 1 END
+                    LIMIT 1)`));
       })
       .where('o.sic_code', sic);
 
@@ -28,7 +26,7 @@ const OrgService = {
       .select('o.id', 'o.name', 'o.type', 'o.ticker', 'o.state', 'o.city',
         'f.revenue', 'f.net_income', 'f.net_margin', 'f.total_assets', 'f.debt_to_equity',
         'f.fiscal_year')
-      .orderBy('f.revenue', 'desc')
+      .orderByRaw('f.revenue DESC NULLS LAST, o.name ASC')
       .limit(perPage).offset((page - 1) * perPage);
 
     return {
@@ -36,9 +34,10 @@ const OrgService = {
         ...r,
         revenueFmt:     fmt(r.revenue, 'currency'),
         netIncomeFmt:   fmt(r.net_income, 'currency'),
-        netMarginFmt:   r.net_margin    ? r.net_margin.toFixed(1) + '%' : '—',
+        netMarginFmt:   r.net_margin     ? Number(r.net_margin).toFixed(2)     + '%' : '—',
         totalAssetsFmt: fmt(r.total_assets, 'currency'),
-        deFmt:          r.debt_to_equity ? r.debt_to_equity.toFixed(1) + '×' : '—',
+        deFmt:          r.debt_to_equity ? Number(r.debt_to_equity).toFixed(2) + '×' : '—',
+        hasFinancials:  r.revenue != null || r.net_income != null,
       })),
       total: total.cnt,
       page,

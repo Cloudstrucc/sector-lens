@@ -63,18 +63,18 @@ SectorLens gives commercial bankers and credit analysts instant access to sector
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js 20 LTS |
-| Web framework | Express.js 4.x |
-| Templating | express-handlebars 7.x |
-| Client reactivity | Alpine.js 3.x (CDN, no build step) |
-| Charts | Chart.js 4.x (CDN) |
-| Database | SQLite via `better-sqlite3` |
-| Query builder | Knex.js 3.x |
-| Auth | `express-session` + `bcrypt` |
-| i18n | `i18next` + `i18next-http-middleware` |
-| Security | `helmet` + `express-rate-limit` |
+| Layer             | Technology                                |
+| ----------------- | ----------------------------------------- |
+| Runtime           | Node.js 20 LTS                            |
+| Web framework     | Express.js 4.x                            |
+| Templating        | express-handlebars 7.x                    |
+| Client reactivity | Alpine.js 3.x (CDN, no build step)        |
+| Charts            | Chart.js 4.x (CDN)                        |
+| Database          | SQLite via `better-sqlite3`             |
+| Query builder     | Knex.js 3.x                               |
+| Auth              | `express-session` + `bcrypt`          |
+| i18n              | `i18next` + `i18next-http-middleware` |
+| Security          | `helmet` + `express-rate-limit`       |
 
 ---
 
@@ -132,6 +132,7 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000)
 
 > **Note for arm64:** If `npm install` fails on `better-sqlite3`, ensure you have the Xcode Command Line Tools:
+>
 > ```bash
 > xcode-select --install
 > ```
@@ -210,9 +211,11 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000)
 
 > **Windows build tools:** If `npm install` fails on `better-sqlite3`, run this in an **Administrator** PowerShell, then retry `npm install`:
+>
 > ```powershell
 > npm install --global windows-build-tools
 > ```
+>
 > Or install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) manually.
 
 ---
@@ -276,23 +279,23 @@ Open [http://localhost:3000](http://localhost:3000)
 
 Copy `.env.example` to `.env` and set the following:
 
-| Variable | Required | Description |
-|---|---|---|
-| `NODE_ENV` | No | `development` or `production` |
-| `PORT` | No | HTTP port (default: `3000`) |
-| `SESSION_SECRET` | **Yes** | Random 64-char hex string for session signing |
-| `DB_PATH` | No | Path to SQLite file (default: `./data/sectorlens.db`) |
-| `DB_DIR` | No | Directory for SQLite file (default: `./data`) |
-| `FMP_API_KEY` | No | Financial Modeling Prep API key (for live data ingestion) |
-| `SMTP_HOST` | No | SMTP server for transactional email |
-| `INGEST_ENABLED` | No | Set `true` to enable nightly scheduled ingestion |
-| `INGEST_USER_AGENT` | No | Required by SEC EDGAR — e.g. `SectorLens/1.0 (you@email.com)` |
-| `INGEST_TRIGGER_KEY` | No | Secret key for triggering ingestion via API without login |
-| `FMP_API_KEY` | No | Financial Modeling Prep API key (enables CA/EU financials) |
-| `COMPANIES_HOUSE_API_KEY` | No | UK Companies House API key |
-| `SMTP_PORT` | No | SMTP port (default: `587`) |
-| `SMTP_USER` | No | SMTP username |
-| `SMTP_PASS` | No | SMTP password |
+| Variable                    | Required      | Description                                                     |
+| --------------------------- | ------------- | --------------------------------------------------------------- |
+| `NODE_ENV`                | No            | `development` or `production`                               |
+| `PORT`                    | No            | HTTP port (default:`3000`)                                    |
+| `SESSION_SECRET`          | **Yes** | Random 64-char hex string for session signing                   |
+| `DB_PATH`                 | No            | Path to SQLite file (default:`./data/sectorlens.db`)          |
+| `DB_DIR`                  | No            | Directory for SQLite file (default:`./data`)                  |
+| `FMP_API_KEY`             | No            | Financial Modeling Prep API key (for live data ingestion)       |
+| `SMTP_HOST`               | No            | SMTP server for transactional email                             |
+| `INGEST_ENABLED`          | No            | Set `true` to enable nightly scheduled ingestion              |
+| `INGEST_USER_AGENT`       | No            | Required by SEC EDGAR — e.g.`SectorLens/1.0 (you@email.com)` |
+| `INGEST_TRIGGER_KEY`      | No            | Secret key for triggering ingestion via API without login       |
+| `FMP_API_KEY`             | No            | Financial Modeling Prep API key (enables CA/EU financials)      |
+| `COMPANIES_HOUSE_API_KEY` | No            | UK Companies House API key                                      |
+| `SMTP_PORT`               | No            | SMTP port (default:`587`)                                     |
+| `SMTP_USER`               | No            | SMTP username                                                   |
+| `SMTP_PASS`               | No            | SMTP password                                                   |
 
 **Generate a session secret:**
 
@@ -321,13 +324,13 @@ npm run db:reset
 
 ## Running the App
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Development server with auto-reload (nodemon) |
-| `npm start` | Production server |
-| `npm run db:migrate` | Create/update database tables |
-| `npm run db:seed` | Load seed data (upsert — safe on existing data) |
-| `npm run db:reset` | Drop all tables (destructive) |
+| Command                | Description                                      |
+| ---------------------- | ------------------------------------------------ |
+| `npm run dev`        | Development server with auto-reload (nodemon)    |
+| `npm start`          | Production server                                |
+| `npm run db:migrate` | Create/update database tables                    |
+| `npm run db:seed`    | Load seed data (upsert — safe on existing data) |
+| `npm run db:reset`   | Drop all tables (destructive)                    |
 
 **First-time setup (any platform):**
 
@@ -405,14 +408,14 @@ sectorlens/
 
 ## Data Sources
 
-| Source | Coverage | URL |
-|---|---|---|
-| OSHA SIC Manual | SIC code taxonomy | https://www.osha.gov/data/sic-manual |
-| SEC EDGAR XBRL API | All US public company financials | https://data.sec.gov |
-| FDIC BankFind Suite | All FDIC-insured banks (SIC 60xx) | https://banks.fdic.gov/api |
-| ProPublica Nonprofit Explorer | IRS 990 data for US nonprofits | https://projects.propublica.org/nonprofits/api |
-| Financial Modeling Prep | Normalized financial statements | https://financialmodelingprep.com |
-| USASpending.gov | Federal/municipal financial data | https://api.usaspending.gov |
+| Source                        | Coverage                          | URL                                            |
+| ----------------------------- | --------------------------------- | ---------------------------------------------- |
+| OSHA SIC Manual               | SIC code taxonomy                 | https://www.osha.gov/data/sic-manual           |
+| SEC EDGAR XBRL API            | All US public company financials  | https://data.sec.gov                           |
+| FDIC BankFind Suite           | All FDIC-insured banks (SIC 60xx) | https://banks.fdic.gov/api                     |
+| ProPublica Nonprofit Explorer | IRS 990 data for US nonprofits    | https://projects.propublica.org/nonprofits/api |
+| Financial Modeling Prep       | Normalized financial statements   | https://financialmodelingprep.com              |
+| USASpending.gov               | Federal/municipal financial data  | https://api.usaspending.gov                    |
 
 > The current release ships with **seed data** for ~30 SIC codes and ~130 sample organizations covering banking, software, retail, utilities, healthcare, insurance, and more. Live API ingestion via `IngestService.js` populates all remaining sectors — see [Data Ingestion](#data-ingestion).
 
@@ -426,15 +429,15 @@ SectorLens ships with seed data for demo purposes. Live financial data is popula
 
 Add these to your `.env` (locally) and Azure App Settings (production) before triggering ingestion:
 
-| Variable | Required | Description |
-|---|---|---|
-| `INGEST_ENABLED` | No | Set `true` to enable nightly scheduled ingestion |
-| `INGEST_CRON_SCHEDULE` | No | Cron expression (default: `0 2 * * *` — 2am UTC daily) |
-| `INGEST_COUNTRIES` | No | Comma-separated country codes to ingest (e.g. `US,CA`) |
-| `INGEST_USER_AGENT` | **Yes** | Required by SEC EDGAR — e.g. `SectorLens/1.0 (your@email.com)` |
-| `INGEST_TRIGGER_KEY` | No | Secret key for triggering ingestion via API without a login session |
-| `FMP_API_KEY` | No | Financial Modeling Prep API key — enables Canadian and EU bank financials |
-| `COMPANIES_HOUSE_API_KEY` | No | UK Companies House API key — enables UK company data |
+| Variable                    | Required      | Description                                                                |
+| --------------------------- | ------------- | -------------------------------------------------------------------------- |
+| `INGEST_ENABLED`          | No            | Set `true` to enable nightly scheduled ingestion                         |
+| `INGEST_CRON_SCHEDULE`    | No            | Cron expression (default:`0 2 * * *` — 2am UTC daily)                   |
+| `INGEST_COUNTRIES`        | No            | Comma-separated country codes to ingest (e.g.`US,CA`)                    |
+| `INGEST_USER_AGENT`       | **Yes** | Required by SEC EDGAR — e.g.`SectorLens/1.0 (your@email.com)`           |
+| `INGEST_TRIGGER_KEY`      | No            | Secret key for triggering ingestion via API without a login session        |
+| `FMP_API_KEY`             | No            | Financial Modeling Prep API key — enables Canadian and EU bank financials |
+| `COMPANIES_HOUSE_API_KEY` | No            | UK Companies House API key — enables UK company data                      |
 
 ### Automatic nightly ingestion
 
@@ -496,6 +499,7 @@ curl https://your-app.azurewebsites.net/api/ingest/status/job_xxxxx
 ```
 
 Response:
+
 ```json
 {
   "jobId": "job_1234567890_abc123",
@@ -532,17 +536,17 @@ If using the included `deploy-azure.sh`:
 
 ### Data sources and adapters
 
-| Adapter | Coverage | Auth |
-|---|---|---|
-| FDIC BankFind | All FDIC-insured US banks (SIC 60xx) | None — free |
-| SEC EDGAR XBRL | All US public companies across all SICs | None — `INGEST_USER_AGENT` required |
-| ProPublica 990 | All US nonprofits — IRS Form 990 | None — free |
-| OSFI Canada | Canadian federally regulated banks | None — uses FMP for financials |
-| Statistics Canada | Canadian sector-level financial statistics | None — free |
-| Companies House UK | UK registered companies | `COMPANIES_HOUSE_API_KEY` |
-| EBA Europe | Major EU bank capital and leverage data | None — uses FMP for financials |
-| OECD.Stat | Pan-OECD macro and sector statistics | None — free |
-| Financial Modeling Prep | Normalized financials for all tickers | `FMP_API_KEY` |
+| Adapter                 | Coverage                                   | Auth                                  |
+| ----------------------- | ------------------------------------------ | ------------------------------------- |
+| FDIC BankFind           | All FDIC-insured US banks (SIC 60xx)       | None — free                          |
+| SEC EDGAR XBRL          | All US public companies across all SICs    | None —`INGEST_USER_AGENT` required |
+| ProPublica 990          | All US nonprofits — IRS Form 990          | None — free                          |
+| OSFI Canada             | Canadian federally regulated banks         | None — uses FMP for financials       |
+| Statistics Canada       | Canadian sector-level financial statistics | None — free                          |
+| Companies House UK      | UK registered companies                    | `COMPANIES_HOUSE_API_KEY`           |
+| EBA Europe              | Major EU bank capital and leverage data    | None — uses FMP for financials       |
+| OECD.Stat               | Pan-OECD macro and sector statistics       | None — free                          |
+| Financial Modeling Prep | Normalized financials for all tickers      | `FMP_API_KEY`                       |
 
 ---
 
@@ -603,4 +607,4 @@ Please follow the existing code style and add meaningful commit messages.
 
 ## License
 
-MIT © 2025 SectorLens Inc.
+MIT © 2025 [Cloudstrucc Inc](https://www.cloudstrucc.com).

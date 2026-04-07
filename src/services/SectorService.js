@@ -39,12 +39,14 @@ const SECTOR_KPI_CONFIG = {
 function fmt(val, format) {
   if (val == null) return '—';
   if (format === 'currency') {
-    if (Math.abs(val) >= 1e9) return '$' + (val / 1e9).toFixed(1) + 'B';
-    if (Math.abs(val) >= 1e6) return '$' + (val / 1e6).toFixed(0) + 'M';
+    if (Math.abs(val) >= 1e12) return '$' + (val / 1e12).toFixed(2) + 'T';
+    if (Math.abs(val) >= 1e9)  return '$' + (val / 1e9).toFixed(2)  + 'B';
+    if (Math.abs(val) >= 1e6)  return '$' + (val / 1e6).toFixed(2)  + 'M';
+    if (Math.abs(val) >= 1e3)  return '$' + (val / 1e3).toFixed(2)  + 'K';
     return '$' + val.toFixed(0);
   }
-  if (format === 'percent') return val.toFixed(1) + '%';
-  if (format === 'ratio')   return val.toFixed(1) + '×';
+  if (format === 'percent') return Number(val).toFixed(2) + '%';
+  if (format === 'ratio')   return Number(val).toFixed(2) + '×';
   return val;
 }
 
@@ -97,12 +99,23 @@ const SectorService = {
       .limit(10);
   },
 
-  async getSectorDashboard(sic, locale = 'en') {
+  async getSectorDashboard(sic, locale = 'en', fyOverride = null) {
     const sector = await db('sic_codes').where('sic_code', sic).first();
     if (!sector) return null;
 
-    // ── Use the most recent year with actual data ──────────────────────────
-    const fy = await getLatestBenchmarkYear(sic);
+    // ── Available fiscal years for this SIC ───────────────────────────────
+    const fyRows = await db('sector_benchmarks')
+      .where('sic_code', sic)
+      .distinct('fiscal_year')
+      .orderBy('fiscal_year', 'desc')
+      .pluck('fiscal_year');
+
+    const availableYears = fyRows.length ? fyRows : [new Date().getFullYear() - 1];
+
+    // ── Use requested year or most recent ─────────────────────────────────
+    const fy = fyOverride && availableYears.includes(Number(fyOverride))
+      ? Number(fyOverride)
+      : availableYears[0];
 
     const kpiConfig  = SECTOR_KPI_CONFIG[sic] || SECTOR_KPI_CONFIG['default'];
     const benchmarks = await db('sector_benchmarks').where({ sic_code: sic, fiscal_year: fy });
@@ -187,8 +200,9 @@ const SectorService = {
       companies: companiesFormatted,
       chartRevenue,
       chartMargins,
-      entityCount,      // total orgs in this sector
-      reportingCount,   // orgs with financial data
+      entityCount,
+      reportingCount,
+      availableYears,
       fy,
     };
   },

@@ -229,8 +229,6 @@ const IngestService = {
       };
     }
 
-    let totalOrgs = 0, totalFin = 0, totalErrors = 0;
-
     for (const adapterDef of adapters) {
       // Skip adapters that require a missing API key
       if (adapterDef.requiresKey && !process.env[adapterDef.requiresKey]) {

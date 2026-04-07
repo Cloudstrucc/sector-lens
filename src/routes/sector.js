@@ -22,7 +22,8 @@ router.get('/:sic', async (req, res) => {
       companies: data.companies,
       chartRevenue: JSON.stringify(data.chartRevenue),
       chartMargins: JSON.stringify(data.chartMargins),
-      entityCount: data.entityCount,
+      entityCount:    data.entityCount,
+      reportingCount: data.reportingCount,
       fy: data.fy,
       compareMetrics: JSON.stringify(await SectorService.getCompareMetrics(req.params.sic, locale)),
       layout: 'main',
@@ -65,15 +66,33 @@ router.get('/:sic/metric/:metric', async (req, res) => {
     const sector = await db('sic_codes').where('sic_code', sic).first();
     if (!sector) return res.status(404).render('error', { title: 'Not Found', code: 404, message: '' });
 
-    const bench = await db('sector_benchmarks').where({ sic_code: sic, fiscal_year: 2023, metric_name: metric }).first();
+    // ── Use the most recent year with benchmark data for this SIC ────────────
+    const latestBench = await db('sector_benchmarks')
+      .where('sic_code', sic)
+      .max('fiscal_year as yr')
+      .first();
+    const fy = (latestBench && latestBench.yr) ? latestBench.yr : new Date().getFullYear() - 1;
 
+    const bench = await db('sector_benchmarks')
+      .where({ sic_code: sic, fiscal_year: fy, metric_name: metric })
+      .first();
+
+    // Get all orgs with this metric in the latest available year per org
     const entities = await db('organizations as o')
-      .join('financials as f', 'o.id', 'f.org_id')
+      .join('financials as f', function () {
+        this.on('o.id', '=', 'f.org_id')
+            .andOn('f.id', '=',
+              db.raw(`(SELECT id FROM financials
+                        WHERE org_id = o.id
+                          AND ${metric} IS NOT NULL
+                          AND period_type IN ('annual','manual')
+                        ORDER BY fiscal_year DESC
+                        LIMIT 1)`));
+      })
       .where('o.sic_code', sic)
-      .where('f.fiscal_year', 2023)
-      .where('f.period_type', 'annual')
       .whereNotNull(`f.${metric}`)
-      .select('o.id', 'o.name', 'o.type', 'o.ticker', `f.${metric} as metric_val`, 'f.revenue', 'f.net_income')
+      .select('o.id', 'o.name', 'o.type', 'o.ticker',
+              `f.${metric} as metric_val`, 'f.revenue', 'f.net_income', 'f.fiscal_year')
       .orderBy(`f.${metric}`, 'desc');
 
     const METRIC_LABELS = {
@@ -98,7 +117,7 @@ router.get('/:sic/metric/:metric', async (req, res) => {
 
     res.render('kpi-detail', {
       title: `${METRIC_LABELS[metric] || metric} — ${sector.name} — SectorLens`,
-      sic, sector, metric,
+      sic, sector, metric, fy,
       metricLabel: METRIC_LABELS[metric] || metric,
       bench, entities,
       isPercent, isRatio, isCurrency,

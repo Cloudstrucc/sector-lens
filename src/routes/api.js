@@ -42,9 +42,14 @@ function parseValue(str, key) {
 /* GET /api/sics — full SIC code list for the browser modal */
 router.get('/sics', async (req, res) => {
   try {
-    const sics = await db('sic_codes')
-      .orderBy('sic_code')
-      .select('sic_code', 'name', 'name_fr', 'entity_count', 'description');
+    const sics = await db('sic_codes as s')
+      .leftJoin(
+        db('organizations').select('sic_code').count('id as n').groupBy('sic_code').as('o'),
+        's.sic_code', 'o.sic_code'
+      )
+      .select('s.sic_code', 's.name', 's.name_fr', 's.description',
+              db.raw('COALESCE(o.n, s.entity_count, 0) as entity_count'))
+      .orderBy('s.sic_code');
     res.json(sics);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -164,14 +164,22 @@ const SectorService = {
       net:       +(benchMap['net_margin']?.median      || 0).toFixed(1),
     };
 
-    // ── Entity count — update sic_codes table with real count ─────────────
-    const entityCount = companies.length || sector.entity_count || 0;
-    if (companies.length > 0) {
-      const realCount = await db('organizations').where('sic_code', sic).count('id as n').first();
-      if (realCount && realCount.n) {
-        await db('sic_codes').where('sic_code', sic).update({ entity_count: realCount.n });
-      }
+    // ── Entity count — use real total count, not the display-capped companies list ──
+    const realCount = await db('organizations').where('sic_code', sic).count('id as n').first();
+    const entityCount = (realCount && realCount.n) ? realCount.n : sector.entity_count || 0;
+
+    // Update sic_codes with the real count so SIC browser stays current
+    if (entityCount > 0) {
+      await db('sic_codes').where('sic_code', sic).update({ entity_count: entityCount });
     }
+
+    // Also get count of orgs WITH financials for the reporting entities label
+    const withFinancials = await db('organizations as o')
+      .join('financials as f', 'o.id', 'f.org_id')
+      .where('o.sic_code', sic)
+      .countDistinct('o.id as n')
+      .first();
+    const reportingCount = (withFinancials && withFinancials.n) ? withFinancials.n : companies.length;
 
     return {
       sector,
@@ -179,7 +187,8 @@ const SectorService = {
       companies: companiesFormatted,
       chartRevenue,
       chartMargins,
-      entityCount,
+      entityCount,      // total orgs in this sector
+      reportingCount,   // orgs with financial data
       fy,
     };
   },

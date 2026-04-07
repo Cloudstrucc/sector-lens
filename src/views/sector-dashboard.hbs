@@ -12,7 +12,7 @@
 
   <div class="metrics-header">
     <h2>Sector Overview</h2>
-    <span class="data-note">Median values · {{entityCount}} reporting entities · FY {{fy}}</span>
+    <span class="data-note">Median values · {{reportingCount}} reporting entities · FY {{fy}}{{#if entityCount}} · {{entityCount}} total in sector{{/if}}</span>
   </div>
 
   {{!-- KPI Grid — each tile links to its drill-down page --}}

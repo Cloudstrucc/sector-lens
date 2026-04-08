@@ -8,7 +8,11 @@ echo "[startup] SectorLens boot sequence..."
 mkdir -p /home/data
 echo "[startup] Data directory ready: /home/data"
 
-# 2. Run DB migrations — process.exit() required or Knex pool hangs
+# 2. Set correct NODE_PATH so node can find modules installed in wwwroot
+export NODE_PATH=/home/site/wwwroot/node_modules:$NODE_PATH
+cd /home/site/wwwroot
+
+# 3. Run DB migrations
 echo "[startup] Running database migrations..."
 node -e "
   require('./src/config/database').runMigrations()
@@ -16,7 +20,7 @@ node -e "
     .catch(e => { console.error('[startup] Migration error:', e.message); process.exit(1); });
 "
 
-# 3. Seed if empty — same process.exit() pattern
+# 4. Seed if empty
 SEED_CHECK=$(node -e "
   const { db } = require('./src/config/database');
   db('sic_codes').count('sic_code as n').first()
@@ -36,6 +40,6 @@ else
   echo "[startup] Database already seeded ($SEED_CHECK SIC codes)"
 fi
 
-# 4. Hand off to the app
+# 5. Hand off to the app
 echo "[startup] Starting application..."
 exec node src/server.js

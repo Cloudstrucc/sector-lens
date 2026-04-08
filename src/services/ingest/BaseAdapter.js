@@ -44,6 +44,10 @@ class BaseAdapter {
 
         if (resp.status === 429) {
           const retryAfter = parseInt(resp.headers['retry-after'] || '60', 10);
+          if (retryAfter > 5) {
+            this._log(`Rate limited ${retryAfter}s — skipping source (limit > 5s threshold)`);
+            return null;
+          }
           this._log(`Rate limited — waiting ${retryAfter}s`);
           await this._sleep(retryAfter * 1000);
           continue;

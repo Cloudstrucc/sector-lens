@@ -9,9 +9,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "db:migrate": "node -e \"require('./src/config/database').runMigrations()\"",
-    "db:seed": "node -e \"require('./src/config/database').runSeeds().then(()=>process.exit(0)).catch(e=>{console.error(e.message);process.exit(1)})\"",
     "db:migrate": "node -e \"require('./src/config/database').runMigrations().then(()=>process.exit(0)).catch(e=>{console.error(e.message);process.exit(1)})\"",
+    "db:seed": "node -e \"require('./src/config/database').runSeeds().then(()=>process.exit(0)).catch(e=>{console.error(e.message);process.exit(1)})\"",
     "db:reset": "node -e \"require('./src/config/database').resetDb().then(()=>process.exit(0)).catch(e=>{console.error(e.message);process.exit(1)})\""
   },
   "dependencies": {
@@ -37,7 +36,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.1.14"
   },
   "nodemonConfig": {
     "ignore": [

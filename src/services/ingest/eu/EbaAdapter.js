@@ -86,7 +86,7 @@ class EbaAdapter extends BaseAdapter {
   }
 
   async _fetchFmpFinancials(ticker, apiKey) {
-    const url = `https://financialmodelingprep.com/api/v3/income-statement/${ticker}?limit=2&apikey=${apiKey}`;
+    const url = `https://financialmodelingprep.com/stable/income-statement?symbol=${ticker}&limit=2&apikey=${apiKey}`;
     const data = await this.fetchWithRetry(url);
     if (!Array.isArray(data) || !data.length) return null;
 

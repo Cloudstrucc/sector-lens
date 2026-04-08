@@ -173,7 +173,7 @@ class FdicAdapter extends BaseAdapter {
           ticker: bank.ticker, country_code: 'US', source_id: bank.ticker,
         });
 
-        const url  = `https://financialmodelingprep.com/api/v3/income-statement/${bank.ticker}?limit=2&apikey=${fmpKey}`;
+        const url  = `https://financialmodelingprep.com/stable/income-statement?symbol=${bank.ticker}&limit=2&apikey=${fmpKey}`;
         const data = await this.fetchWithRetry(url);
         if (Array.isArray(data) && data.length > 0) {
           const d    = data[0];

@@ -132,7 +132,12 @@ if $WATCH; then
     ORGS=$(echo "$STATUS"    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('orgs_upserted',0))" 2>/dev/null || echo "0")
     FIN=$(echo "$STATUS"     | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('financials_upserted',0))" 2>/dev/null || echo "0")
     ERRORS=$(echo "$STATUS"  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('errors',0))" 2>/dev/null || echo "0")
-    ELAPSED=$(echo "$STATUS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('elapsed_seconds',0))" 2>/dev/null || echo "0")
+    ELAPSED=$(echo "$STATUS" | python3 -c "
+import sys,json,time
+d=json.load(sys.stdin)
+e=d.get('elapsed_seconds',0)
+print(max(0, int(e)) if isinstance(e, (int,float)) else 0)
+" 2>/dev/null || echo "0")
     MSG=$(echo "$STATUS"     | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('last_message','') or '')" 2>/dev/null || echo "")
 
     # Progress bar

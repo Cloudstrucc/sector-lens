@@ -1,33 +1,6 @@
 <nav id="topnav">
   <a class="nav-logo" href="/">Sector<span>Lens</span></a>
 
-  {{!-- Sector bar (shown on sector/org pages) --}}
-  {{#if sic}}
-  <div id="sector-bar-inline">
-    <div class="sector-bar-left">
-      <span class="sic-badge">{{sic}}</span>
-      <span class="sector-title">{{sector.name}}</span>
-    </div>
-    <div class="sector-bar-right">
-      <input class="search-mini" type="text" placeholder="Filter organizations…"
-             hx-get="/sector/{{sic}}/orgs"
-             hx-trigger="keyup changed delay:300ms"
-             hx-target="#org-table-body"
-             hx-include="[name='type']"
-             name="search">
-      <a href="/sector/{{sic}}/orgs" class="btn btn-outline btn-sm">All Orgs</a>
-      <button class="btn btn-outline btn-sm"
-              @click="triggerRefresh('{{sic}}')"
-              :disabled="$store.ingest.running"
-              :title="$store.ingest.running ? 'Refresh in progress…' : 'Refresh data from live sources for this sector'">
-        <span x-show="!$store.ingest.running">↻ Refresh</span>
-        <span x-show="$store.ingest.running" x-text="'↻ ' + $store.ingest.progress + '%'"></span>
-      </button>
-      <button class="btn btn-primary btn-sm" @click="modal='compare'">⊕ Compare</button>
-    </div>
-  </div>
-  {{/if}}
-
   <div class="nav-right">
     {{!-- Language toggle --}}
     <div class="lang-toggle">
@@ -43,21 +16,15 @@
 
     {{!-- Dark mode toggle --}}
     <button class="theme-toggle" @click="toggleTheme()" :title="theme==='dark' ? 'Switch to light mode' : 'Switch to dark mode'" aria-label="Toggle theme">
-      <!-- Moon: visible in light mode -->
       <svg x-show="theme==='light'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
       </svg>
-      <!-- Sun: visible in dark mode -->
       <svg x-show="theme==='dark'" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="5"/>
-        <line x1="12" y1="1" x2="12" y2="3"/>
-        <line x1="12" y1="21" x2="12" y2="23"/>
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-        <line x1="1" y1="12" x2="3" y2="12"/>
-        <line x1="21" y1="12" x2="23" y2="12"/>
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
       </svg>
     </button>
 
@@ -67,7 +34,7 @@
         <div class="profile-icon">
           {{#if user}}{{user.first_name.[0]}}{{user.last_name.[0]}}{{else}}?{{/if}}
         </div>
-        <span>{{#if user}}{{user.first_name}}{{else}}Account{{/if}}</span>
+        <span class="profile-label">{{#if user}}{{user.first_name}}{{else}}Account{{/if}}</span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
           <path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -76,6 +43,7 @@
       <div class="dropdown" :class="{open: profileOpen}">
         {{#if user}}
           <a href="/account">My Profile</a>
+          <a href="/account/strategy">Lending Strategy</a>
           <a href="/auth/logout">Log Out</a>
         {{else}}
           <button @click="modal='login'; profileOpen=false">Log In</button>
@@ -86,3 +54,30 @@
     </div>
   </div>
 </nav>
+
+{{!-- Sector bar — separate from nav so mobile doesn't collapse --}}
+{{#if sic}}
+<div id="sector-bar-inline">
+  <div class="sector-bar-left">
+    <span class="sic-badge">{{sic}}</span>
+    <span class="sector-title">{{sector.name}}</span>
+  </div>
+  <div class="sector-bar-right">
+    <input class="search-mini" type="text" placeholder="Filter organizations…"
+           hx-get="/sector/{{sic}}/orgs"
+           hx-trigger="keyup changed delay:300ms"
+           hx-target="#org-table-body"
+           hx-include="[name='type']"
+           name="search">
+    <a href="/sector/{{sic}}/orgs" class="btn btn-outline btn-sm">All Orgs</a>
+    <button class="btn btn-outline btn-sm"
+            @click="triggerRefresh('{{sic}}')"
+            :disabled="$store.ingest.running"
+            :title="$store.ingest.running ? 'Refresh in progress…' : 'Refresh data from live sources for this sector'">
+      <span x-show="!$store.ingest.running">↻ Refresh</span>
+      <span x-show="$store.ingest.running" x-text="'↻ ' + $store.ingest.progress + '%'"></span>
+    </button>
+    <button class="btn btn-primary btn-sm" @click="modal='compare'">⊕ Compare</button>
+  </div>
+</div>
+{{/if}}

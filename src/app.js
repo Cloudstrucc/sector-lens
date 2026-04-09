@@ -103,6 +103,8 @@ async function createApp() {
       not: (a)    => !a,
       gt:  (a, b) => Number(a) > Number(b),
       gte: (a, b) => Number(a) >= Number(b),
+      lte: (a, b) => Number(a) <= Number(b),
+      includes: (str, substr) => str && String(str).includes(substr),
       inc: (n)    => Number(n) + 1,
       concat(...args) { return args.slice(0, -1).join(''); },
       ucfirst(str)    { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; },
@@ -115,8 +117,33 @@ async function createApp() {
         if (n == null) return '—';
         if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
         if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(0) + 'M';
-        return n;
+        return '$' + Number(n).toLocaleString();
       },
+      fmtPct(n, decimals) {
+        if (n == null) return '—';
+        return Number(n).toFixed(typeof decimals === 'number' ? decimals : 1) + '%';
+      },
+      fmtRatio(n) {
+        if (n == null) return '—';
+        return Number(n).toFixed(2) + '×';
+      },
+      // Smart formatter — picks currency/percent/ratio based on metric name
+      fmtMetric(val, metric) {
+        if (val == null) return '—';
+        const pct = ['gross_margin','net_margin','operating_margin','roe','roa',
+                     'tier1_capital_ratio','efficiency_ratio'];
+        const ratio = ['debt_to_equity'];
+        const v = Number(val);
+        if (pct.includes(metric))   return v.toFixed(1) + '%';
+        if (ratio.includes(metric)) return v.toFixed(2) + '×';
+        // currency
+        if (Math.abs(v) >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
+        if (Math.abs(v) >= 1e9)  return '$' + (v / 1e9).toFixed(1)  + 'B';
+        if (Math.abs(v) >= 1e6)  return '$' + (v / 1e6).toFixed(0)  + 'M';
+        if (Math.abs(v) >= 1e3)  return '$' + (v / 1e3).toFixed(0)  + 'K';
+        return '$' + v.toFixed(0);
+      },
+      neMetric(metric, col) { return metric !== col; }, // show column only if not the active metric
       range(start, end) {
         const arr = [];
         for (let i = Number(start); i <= Number(end); i++) arr.push(i);

@@ -18,10 +18,10 @@
       <a href="/sector/{{sic}}/orgs" class="btn btn-outline btn-sm">All Orgs</a>
       <button class="btn btn-outline btn-sm"
               @click="triggerRefresh('{{sic}}')"
-              :disabled="ingest.running"
-              :title="ingest.running ? 'Refresh in progress…' : 'Refresh data from live sources for this sector'">
-        <span x-show="!ingest.running">↻ Refresh</span>
-        <span x-show="ingest.running" x-text="'↻ ' + ingest.progress + '%'"></span>
+              :disabled="$store.ingest.running"
+              :title="$store.ingest.running ? 'Refresh in progress…' : 'Refresh data from live sources for this sector'">
+        <span x-show="!$store.ingest.running">↻ Refresh</span>
+        <span x-show="$store.ingest.running" x-text="'↻ ' + $store.ingest.progress + '%'"></span>
       </button>
       <button class="btn btn-primary btn-sm" @click="modal='compare'">⊕ Compare</button>
     </div>

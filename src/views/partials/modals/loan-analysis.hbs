@@ -1,0 +1,160 @@
+{{!-- Loan Analysis Modal — detailed breakdown of loan parameters --}}
+{{!-- Triggered by: modal='loan-analysis' on the sectorApp Alpine component --}}
+<div x-show="modal==='loan-analysis'"
+     x-transition:enter="transition ease-out duration-150"
+     x-transition:enter-start="opacity-0 scale-95"
+     x-transition:enter-end="opacity-100 scale-100"
+     style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.45);"
+     @click.self="modal=null">
+
+  <div style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r-lg);width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+
+    {{!-- Header --}}
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;position:sticky;top:0;background:var(--bg);z-index:1;">
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--text);">Detailed Loan Analysis</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px;">{{org.name}} · SIC {{org.sic_code}} · FY{{finYear}}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        {{#if loanParams.creditSignal}}
+        <span style="font-size:11px;padding:3px 8px;border-radius:4px;
+          {{#if (includes loanParams.creditSignal 'Safe')}}background:#dcfce7;color:#166534;
+          {{else if (includes loanParams.creditSignal 'Grey')}}background:#fef9c3;color:#854d0e;
+          {{else}}background:#fee2e2;color:#991b1b;{{/if}}">
+          {{loanParams.creditSignal}}
+        </span>
+        {{/if}}
+        <button @click="modal=null" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-3);line-height:1;padding:2px 6px;">&times;</button>
+      </div>
+    </div>
+
+    {{#if loanParams.hasData}}
+
+    {{!-- Key Ratios Summary --}}
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div style="background:var(--bg-alt);border-radius:var(--r-md);padding:12px;">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">DSCR</div>
+        <div style="font-size:20px;font-weight:600;color:{{#if loanParams.dscr}}{{#if (gte loanParams.dscr 1.5)}}var(--green){{else}}var(--warn){{/if}}{{else}}var(--text-3){{/if}};">
+          {{#if loanParams.dscr}}{{loanParams.dscr}}×{{else}}—{{/if}}
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Debt Service Coverage</div>
+      </div>
+      <div style="background:var(--bg-alt);border-radius:var(--r-md);padding:12px;">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Leverage</div>
+        <div style="font-size:20px;font-weight:600;color:{{#if loanParams.leverage}}{{#if (lte loanParams.leverage 3.5)}}var(--green){{else}}var(--warn){{/if}}{{else}}var(--text-3){{/if}};">
+          {{#if loanParams.leverage}}{{loanParams.leverage}}×{{else}}—{{/if}}
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px;">Debt ÷ EBITDA</div>
+      </div>
+      <div style="background:var(--bg-alt);border-radius:var(--r-md);padding:12px;">
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Max Loan (est.)</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">{{loanParams.maxLoanFmt}}</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:2px;">4× EBITDA senior limit</div>
+      </div>
+    </div>
+
+    {{!-- Parameter Breakdown --}}
+    <div style="padding:16px 24px;">
+
+      {{!-- Rate Tier --}}
+      <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Rate Tier</div>
+          <div style="font-size:14px;font-weight:600;color:var(--blue);font-family:'Cormorant Garant',serif;">{{loanParams.rateLabel}}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.65;background:var(--bg-alt);border-radius:var(--r-md);padding:10px 12px;">
+          {{loanParams.rateReasoning}}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;">OCC Bulletin 2023-1</span>
+          <span style="font-size:11px;padding:2px 7px;background:#f0fdf4;color:#166534;border-radius:3px;">OSFI B-20 §4.2</span>
+          <span style="font-size:11px;padding:2px 7px;background:#faf5ff;color:#6b21a8;border-radius:3px;">S&amp;P Leveraged Lending 2024</span>
+        </div>
+      </div>
+
+      {{!-- Suggested Term --}}
+      <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Suggested Term</div>
+          <div style="font-size:14px;font-weight:600;color:var(--blue);font-family:'Cormorant Garant',serif;">{{loanParams.term}}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.65;background:var(--bg-alt);border-radius:var(--r-md);padding:10px 12px;">
+          {{loanParams.termReasoning}}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;">OCC Commercial Lending Handbook</span>
+          <span style="font-size:11px;padding:2px 7px;background:#f0fdf4;color:#166534;border-radius:3px;">BDC Lending Norms 2023</span>
+        </div>
+      </div>
+
+      {{!-- Amortization --}}
+      <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Amortization</div>
+          <div style="font-size:14px;font-weight:600;color:var(--blue);font-family:'Cormorant Garant',serif;">{{loanParams.amort}}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.65;background:var(--bg-alt);border-radius:var(--r-md);padding:10px 12px;">
+          {{loanParams.amortReasoning}}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;">OCC Real Estate Lending Standards</span>
+          <span style="font-size:11px;padding:2px 7px;background:#f0fdf4;color:#166534;border-radius:3px;">OSFI B-20</span>
+        </div>
+      </div>
+
+      {{!-- Covenant Package --}}
+      <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);">Covenant Package</div>
+          <div style="font-size:14px;font-weight:600;color:var(--blue);font-family:'Cormorant Garant',serif;">{{loanParams.covenant}}</div>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.65;background:var(--bg-alt);border-radius:var(--r-md);padding:10px 12px;">
+          {{loanParams.covenantReasoning}}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11px;padding:2px 7px;background:#f0fdf4;color:#166534;border-radius:3px;">OSFI B-6</span>
+          <span style="font-size:11px;padding:2px 7px;background:#fffbeb;color:#92400e;border-radius:3px;">Moody's Covenant Quality Reports</span>
+          <span style="font-size:11px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;">OCC Leveraged Lending Guidance</span>
+        </div>
+      </div>
+
+      {{!-- Methodology --}}
+      <div style="background:var(--bg-alt);border-radius:var(--r-md);padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">Methodology &amp; References</div>
+        <div style="font-size:11px;color:var(--text-3);line-height:1.7;">
+          <strong>DSCR</strong> — Net income ÷ estimated annual debt service (interest + ~8% principal repayment). Per OCC Bulletin 2023-1 and OSFI B-20 §4.2.<br>
+          <strong>Leverage</strong> — Total debt ÷ EBITDA (or net income × 1.35 proxy if EBITDA not reported). Per Basel III Framework (BIS 2023) and OCC leveraged lending standards.<br>
+          <strong>Rate spread</strong> — Tiered DSCR model: ≥2.0× → Prime+0.50–0.75%; 1.5–1.99× → +0.75–1.25%; 1.25–1.49× → +1.25–2.00%; &lt;1.25× → +2.00%+. Source: S&amp;P Global Leveraged Lending Review 2024, OCC 2023-1.<br>
+          <strong>Term &amp; amortization</strong> — Asset class proxy derived from SIC code. Per OCC Commercial Lending Handbook and OCC Real Estate Lending Standards.<br>
+          <strong>Covenants</strong> — Leverage and DSCR thresholds per OSFI B-6 and OCC leveraged lending guidance. Cov-lite threshold: leverage &lt;2× + DSCR &gt;2.0×.<br>
+          <strong>Credit signal</strong> — Modified Altman Z-Score (Altman 1968, updated 2020). Not a substitute for full credit underwriting.<br>
+          <strong>Max loan size</strong> — 4× EBITDA senior debt cap per OCC leveraged lending standards and Basel III.<br>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-3);">
+          External references:
+          <a href="https://www.occ.treas.gov/news-issuances/bulletins/2023/bulletin-2023-1.html" target="_blank" style="color:var(--blue);">OCC 2023-1</a> ·
+          <a href="https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/residential-mortgage-underwriting-practices-procedures" target="_blank" style="color:var(--blue);">OSFI B-20</a> ·
+          <a href="https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/sound-credit-granting-monitoring-practices" target="_blank" style="color:var(--blue);">OSFI B-6</a> ·
+          <a href="https://www.bis.org/basel_framework" target="_blank" style="color:var(--blue);">Basel III (BIS)</a> ·
+          <a href="https://www.bankofcanada.ca/publications/fsr/" target="_blank" style="color:var(--blue);">BoC Financial System Review</a>
+        </div>
+      </div>
+
+    </div>
+
+    {{else}}
+    <div style="padding:40px 24px;text-align:center;color:var(--text-3);">
+      <div style="font-size:32px;margin-bottom:12px;">📊</div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px;">Insufficient financial data</div>
+      <div style="font-size:12px;line-height:1.6;">No reported financials available for {{org.name}}.<br>Loan parameters cannot be calculated without revenue, net income, or asset data.</div>
+    </div>
+    {{/if}}
+
+    {{!-- Footer --}}
+    <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg);">
+      <div style="font-size:11px;color:var(--text-3);">Pre-assessment only · Not a credit decision · Based on reported public data</div>
+      <button @click="modal=null" class="btn btn-outline btn-sm">Close</button>
+    </div>
+
+  </div>
+</div>

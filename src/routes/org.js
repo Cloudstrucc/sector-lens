@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { OrgService } = require('../services/OrgService');
+const { OrgService, computeLoanParameters } = require('../services/OrgService');
 const router = express.Router();
 
 /* ── Source metadata builder ─────────────────────────────────────────────── */
@@ -111,13 +111,16 @@ router.get('/:id', async (req, res) => {
     if (!data) return res.status(404).render('error', { title: 'Not Found', code: 404, message: 'Organization not found.' });
 
     const sources = buildOrgSources(data.org);
+    const loanParams = computeLoanParameters(data.fin, data.org.sic_code);
 
     res.render('org-profile', {
       title: `${data.org.name} — SectorLens`,
       ...data,
-      chartTrend:    JSON.stringify(data.chartTrend),
-      peerChart:     JSON.stringify(data.peerChart),
+      chartTrend:     JSON.stringify(data.chartTrend),
+      peerChart:      JSON.stringify(data.peerChart),
       orgSourcesJson: JSON.stringify(sources),
+      loanParams,
+      loanParamsJson: JSON.stringify(loanParams),
       layout: 'main',
     });
   } catch (err) {

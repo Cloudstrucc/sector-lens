@@ -146,17 +146,39 @@
       </div>
       <div class="banker-block">
         <div class="banker-block-title">Indicative Loan Parameters</div>
+        {{#if loanParams.hasData}}
         <div class="rec-box">
-          <div class="rec-box-label">Loan Range (Indicative)</div>
-          <div class="rec-box-val">Based on financials</div>
-          <div class="rec-box-note">Review DSCR and collateral in diligence</div>
+          <div class="rec-box-label">Max Loan (Indicative)</div>
+          <div class="rec-box-val">{{loanParams.maxLoanFmt}}</div>
+          <div class="rec-box-note">4× EBITDA senior limit · Review DSCR and collateral in diligence</div>
         </div>
         <div style="margin-top:12px;">
-          <div class="loan-row"><span>Rate Tier</span><span class="loan-val">Prime + 0.75–1.50%</span></div>
-          <div class="loan-row"><span>Suggested Term</span><span class="loan-val">5–7 years</span></div>
-          <div class="loan-row"><span>Amortization</span><span class="loan-val">20–25 years</span></div>
-          <div class="loan-row"><span>Covenant Package</span><span class="loan-val">Maintenance</span></div>
+          <div class="loan-row"><span>Rate Tier</span><span class="loan-val">{{loanParams.rateLabel}}</span></div>
+          <div class="loan-row"><span>Suggested Term</span><span class="loan-val">{{loanParams.term}}</span></div>
+          <div class="loan-row"><span>Amortization</span><span class="loan-val">{{loanParams.amort}}</span></div>
+          <div class="loan-row"><span>Covenant Package</span><span class="loan-val">{{loanParams.covenant}}</span></div>
+          <div class="loan-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:8px;">
+            <span>DSCR</span>
+            <span class="loan-val" style="color:{{#if loanParams.dscr}}{{#if (gte loanParams.dscr 1.5)}}var(--green){{else}}var(--warn){{/if}}{{else}}var(--text-3){{/if}};">
+              {{#if loanParams.dscr}}{{loanParams.dscr}}×{{else}}—{{/if}}
+            </span>
+          </div>
+          <div class="loan-row">
+            <span>Leverage</span>
+            <span class="loan-val">{{#if loanParams.leverage}}{{loanParams.leverage}}× EBITDA{{else}}—{{/if}}</span>
+          </div>
         </div>
+        <button @click="modal='loan-analysis'"
+                class="btn btn-outline btn-sm"
+                style="margin-top:12px;width:100%;font-size:12px;">
+          View detailed analysis →
+        </button>
+        {{else}}
+        <div style="padding:16px;text-align:center;color:var(--text-3);font-size:12px;">
+          <div style="margin-bottom:6px;">No financial data available</div>
+          <div>Loan parameters require revenue, net income, or asset data</div>
+        </div>
+        {{/if}}
       </div>
       <div class="banker-block">
         <div class="banker-block-title">Analyst Notes</div>

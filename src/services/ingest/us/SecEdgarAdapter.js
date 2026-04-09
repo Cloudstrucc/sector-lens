@@ -324,6 +324,7 @@ class SecEdgarAdapter extends BaseAdapter {
       if (fs.existsSync(staticPath)) {
         const companies = JSON.parse(fs.readFileSync(staticPath, 'utf8'));
         if (companies && companies.length > 100) {
+          companies.sort(() => Math.random() - 0.5); // shuffle for representative sample
           this._log(`Loaded ${companies.length} companies from bundled edgar-companies.json`);
           return companies;
         }
@@ -365,6 +366,7 @@ class SecEdgarAdapter extends BaseAdapter {
         const data = await res.json();
         const companies = ep.parse(data);
         if (companies && companies.length > 100) {
+          companies.sort(() => Math.random() - 0.5); // shuffle for representative sample
           // Save for next run
           try {
             const fs = require('fs');

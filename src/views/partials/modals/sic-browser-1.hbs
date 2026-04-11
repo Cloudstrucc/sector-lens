@@ -81,18 +81,17 @@
                   <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
                     <template x-for="(c, i) in (expanded ? sic.countries : sic.countries.slice(0,3))" :key="c">
                       <span x-text="c"
-                            :class="countryPillClass(c)"
-                            class="hint-chip"
-                            style="font-size:11px;padding:2px 10px;"></span>
+                            :style="countryPillStyle(c)"
+                            style="font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap;"></span>
                     </template>
                     <template x-if="!expanded && sic.countries.length > 3">
                       <span @click.stop="expanded=true"
                             x-text="'+' + (sic.countries.length - 3)"
-                            class="hint-chip" style="font-size:11px;padding:2px 10px;cursor:pointer;"></span>
+                            style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;"></span>
                     </template>
                     <template x-if="expanded && sic.countries.length > 3">
                       <span @click.stop="expanded=false"
-                            class="hint-chip" style="font-size:11px;padding:2px 10px;cursor:pointer;">↑</span>
+                            style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;">↑</span>
                     </template>
                   </div>
                 </template>
@@ -107,16 +106,16 @@
                   <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">
                     <template x-for="src in (sexp ? sic.sources : sic.sources.slice(0,3))" :key="src">
                       <span x-text="src"
-                            class="hint-chip" style="font-size:11px;padding:2px 10px;"></span>
+                            style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);white-space:nowrap;"></span>
                     </template>
                     <template x-if="!sexp && sic.sources.length > 3">
                       <span @click.stop="sexp=true"
                             x-text="'+' + (sic.sources.length - 3)"
-                            class="hint-chip" style="font-size:11px;padding:2px 10px;cursor:pointer;"></span>
+                            style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;"></span>
                     </template>
                     <template x-if="sexp && sic.sources.length > 3">
                       <span @click.stop="sexp=false"
-                            class="hint-chip" style="font-size:11px;padding:2px 10px;cursor:pointer;">↑</span>
+                            style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;">↑</span>
                     </template>
                   </div>
                 </template>
@@ -170,26 +169,26 @@
             <template x-if="sic.countries && sic.countries.length > 0">
               <template x-for="(c, i) in (mexp ? sic.countries : sic.countries.slice(0,3))" :key="'m-c-' + c">
                 <span x-text="c"
-                      :class="countryPillClass(c)"
-                      style="font-size:10px;padding:2px 6px;border-radius:99px;white-space:nowrap;"></span>
+                      :style="countryPillStyle(c)"
+                      style="font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap;"></span>
               </template>
             </template>
             <template x-if="sic.countries && !mexp && sic.countries.length > 3">
               <span @click.stop="mexp=true"
                     x-text="'+' + (sic.countries.length - 3)"
-                    class="hint-chip" style="font-size:11px;padding:2px 10px;cursor:pointer;"></span>
+                    style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;"></span>
             </template>
             {{!-- Source pills — max 3 visible on mobile --}}
             <template x-if="sic.sources && sic.sources.length > 0">
               <template x-for="src in (mexp ? sic.sources : sic.sources.slice(0,3))" :key="'m-s-' + src">
                 <span x-text="src"
-                      class="hint-chip" style="font-size:11px;padding:2px 10px;"></span>
+                      style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);white-space:nowrap;"></span>
               </template>
             </template>
             <template x-if="sic.sources && !mexp && sic.sources.length > 3">
               <span @click.stop="mexp=true"
                     x-text="'+' + (sic.sources.length - 3)"
-                    class="hint-chip" style="font-size:11px;padding:2px 10px;cursor:pointer;"></span>
+                    style="font-size:10px;padding:2px 6px;border-radius:3px;background:var(--bg-alt);color:var(--text-2);border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;"></span>
             </template>
             <template x-if="(!sic.countries || sic.countries.length === 0) && (!sic.sources || sic.sources.length === 0)">
               <span style="font-size:11px;color:var(--text-3);">No data yet</span>
@@ -274,10 +273,15 @@ function sicBrowser() {
       return this.sortDir === 'asc' ? '↑' : '↓';
     },
 
-    countryPillClass(code) {
-      // hint-chip handles base styling; we just add a color-accent class
-      const map = { 'US':'pill-us','CA':'pill-ca','GB':'pill-eu','EU':'pill-eu','AU':'pill-au' };
-      return map[code] || '';
+    countryPillStyle(code) {
+      const styles = {
+        'US': 'background:#E6F1FB;color:#0C447C;',
+        'CA': 'background:#EAF3DE;color:#27500A;',
+        'EU': 'background:#EEEDFE;color:#3C3489;',
+        'GB': 'background:#EEEDFE;color:#3C3489;',
+        'AU': 'background:#FAEEDA;color:#633806;',
+      };
+      return styles[code] || 'background:#F1EFE8;color:#444441;';
     },
   };
 }

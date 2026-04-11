@@ -209,8 +209,8 @@ class SecEdgarAdapter extends BaseAdapter {
 
   async run(options = {}) {
     const targetSic     = options.sic || null;
-    const maxOrgs       = options.maxOrgs       || 5000;
-    const maxOrgsPerSic = options.maxOrgsPerSic || 200;
+    const maxOrgs       = options.maxOrgs       || 15000;
+    const maxOrgsPerSic = options.maxOrgsPerSic || 1000;
 
     this.progress('Starting SEC EDGAR ingestion…');
 

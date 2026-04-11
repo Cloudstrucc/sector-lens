@@ -530,10 +530,6 @@ async function run(db) {
   }
   console.log(`  ✓ SIC codes seeded (${SIC_CODES.length} codes)`);
 
-  // Expand to full EDGAR SIC list (~500 codes)
-  const sicExpansion = require('./sic-expansion');
-  await sicExpansion.run(db);
-
   // Organizations + financials
   const currentYear = new Date().getFullYear() - 1;
   for (const org of ORGANIZATIONS) {

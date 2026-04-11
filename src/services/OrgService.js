@@ -207,8 +207,14 @@ function buildKPIs(fin, benchMap, sic) {
  *  - S&P Global Leveraged Lending Review 2024 (spread benchmarks)
  *  - Bank of Canada Financial System Review (sector stress benchmarks)
  */
-function computeLoanParameters(fin, sic) {
+function computeLoanParameters(fin, sic, userStrategy = null) {
   if (!fin) return null;
+
+  // Merge user strategy overrides — user's institution params take priority
+  const strategy = userStrategy || {};
+  const dscrFloor    = strategy.dscr_min     || null;
+  const leverageCap  = strategy.leverage_max || null;
+  const covenantPref = strategy.covenant     || null;
 
   const revenue   = fin.revenue          || 0;
   const netIncome = fin.net_income       || 0;
@@ -226,20 +232,25 @@ function computeLoanParameters(fin, sic) {
   // ── Leverage: Total Debt ÷ EBITDA (Basel III / OCC leveraged lending) ─────
   const leverage = ebitda > 0 ? totalDebt / ebitda : 99;
 
-  // ── Rate tier (spread over prime) — per OCC 2023-1 DSCR tiers ─────────────
+  // ── Rate tier — uses user's DSCR floor if set, else defaults ─────────────
+  const tier1Floor = dscrFloor ? Math.max(dscrFloor, 2.0)  : 2.0;
+  const tier2Floor = dscrFloor ? Math.max(dscrFloor, 1.5)  : 1.5;
+  const tier3Floor = dscrFloor ? Math.max(dscrFloor, 1.25) : 1.25;
+  const strategyNote = dscrFloor ? ` (institution minimum: ${dscrFloor}×)` : '';
+
   let rateSpread, rateTier, rateLabel, rateReasoning;
-  if (dscr >= 2.0) {
+  if (dscr >= tier1Floor) {
     rateSpread = '0.50–0.75%'; rateTier = 1;
-    rateLabel = 'Prime + 0.50–0.75%';
-    rateReasoning = `DSCR of ${dscr.toFixed(2)}× meets Tier 1 threshold (≥2.0×) per OCC Bulletin 2023-1. Strong debt service capacity supports minimum spread pricing.`;
-  } else if (dscr >= 1.5) {
+    rateLabel = strategy.rate_floor ? strategy.rate_floor.replace('Prime +', 'Prime +') : 'Prime + 0.50–0.75%';
+    rateReasoning = `DSCR of ${dscr.toFixed(2)}× meets Tier 1 threshold (≥${tier1Floor}×) per OCC Bulletin 2023-1${strategyNote}. Strong debt service capacity supports minimum spread pricing.`;
+  } else if (dscr >= tier2Floor) {
     rateSpread = '0.75–1.25%'; rateTier = 2;
     rateLabel = 'Prime + 0.75–1.25%';
-    rateReasoning = `DSCR of ${dscr.toFixed(2)}× falls in Tier 2 range (1.5–1.99×) per OCC 2023-1. Adequate but not strong debt service coverage warrants modest spread premium.`;
-  } else if (dscr >= 1.25) {
+    rateReasoning = `DSCR of ${dscr.toFixed(2)}× falls in Tier 2 range (${tier2Floor}–${tier1Floor - 0.01}×) per OCC 2023-1${strategyNote}. Adequate coverage warrants modest spread premium.`;
+  } else if (dscr >= tier3Floor) {
     rateSpread = '1.25–2.00%'; rateTier = 3;
     rateLabel = 'Prime + 1.25–2.00%';
-    rateReasoning = `DSCR of ${dscr.toFixed(2)}× is in Tier 3 (1.25–1.49×). Coverage is thin relative to OCC standards. Higher spread compensates for elevated default risk.`;
+    rateReasoning = `DSCR of ${dscr.toFixed(2)}× is in Tier 3 (${tier3Floor}–${tier2Floor - 0.01}×)${strategyNote}. Coverage is thin — higher spread compensates for elevated default risk.`;
   } else if (dscr > 0) {
     rateSpread = '2.00%+'; rateTier = 4;
     rateLabel = 'Prime + 2.00%+ (risk priced)';
@@ -324,6 +335,18 @@ function computeLoanParameters(fin, sic) {
     else                creditSignal = 'Distress zone (Z < 1.81) — elevated default risk';
   }
 
+  // Apply covenant preference override from user strategy
+  if (covenantPref && covenant !== 'Maintenance + springing cash sweep') {
+    covenant = covenantPref;
+    covenantReasoning += ` [Override: institution strategy requires ${covenantPref} covenants.]`;
+  }
+
+  // Apply leverage cap override
+  let leverageWarning = '';
+  if (leverageCap && leverage > leverageCap) {
+    leverageWarning = `⚠ Leverage of ${leverage.toFixed(1)}× exceeds institution maximum of ${leverageCap}×. Deal likely outside policy.`;
+  }
+
   return {
     dscr:            dscr > 0 ? +dscr.toFixed(2) : null,
     leverage:        leverage < 99 ? +leverage.toFixed(1) : null,
@@ -339,6 +362,8 @@ function computeLoanParameters(fin, sic) {
     covenantReasoning,
     maxLoanFmt,
     creditSignal,
+    leverageWarning,
+    strategyActive:  !!userStrategy,
     hasData:         dscr > 0 || leverage < 99,
   };
 }

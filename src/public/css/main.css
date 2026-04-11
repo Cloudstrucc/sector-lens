@@ -456,3 +456,61 @@ footer { border-top: 1px solid var(--border); padding: 28px 36px; display: flex;
   .page-body { padding: 28px 20px; }
   .search-mini { width: 140px; }
 }
+
+/* ── SIC Browser modal ───────────────────────────────────────────────────── */
+.sic-browser-modal {
+  max-width: 75vw;
+  width: 75vw;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+}
+.sic-th {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 400;
+  text-align: left;
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+  white-space: nowrap;
+}
+
+/* Desktop: show table, hide cards */
+.sic-table-wrap { display: block; }
+.sic-card-list  { display: none;  }
+
+/* Mobile: hide table, show cards */
+@media (max-width: 640px) {
+  .sic-browser-modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    margin: 0;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  .modal-overlay.open { align-items: flex-end; }
+  .sic-table-wrap { display: none;  }
+  .sic-card-list  { display: block; }
+}
+
+/* SIC browser sort headers */
+.sic-th-sort { cursor: pointer; user-select: none; }
+.sic-th-sort:hover { color: var(--text); background: var(--border); }
+.sort-icon { font-size: 10px; opacity: 0.6; margin-left: 3px; }
+
+/* ── SIC browser country pill colour accents (extends .hint-chip) ─────────── */
+.pill-us { color: #185FA5; border-color: #185FA5; }
+.pill-ca { color: #3B6D11; border-color: #3B6D11; }
+.pill-eu { color: #534AB7; border-color: #534AB7; }
+.pill-au { color: #854F0B; border-color: #854F0B; }
+html[data-theme="dark"] .pill-us { color: #85B7EB; border-color: #85B7EB; }
+html[data-theme="dark"] .pill-ca { color: #97C459; border-color: #97C459; }
+html[data-theme="dark"] .pill-eu { color: #AFA9EC; border-color: #AFA9EC; }
+html[data-theme="dark"] .pill-au { color: #EF9F27; border-color: #EF9F27; }

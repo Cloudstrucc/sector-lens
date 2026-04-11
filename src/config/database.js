@@ -197,12 +197,39 @@ async function runMigrations() {
     console.log('  ✓ sessions');
   }
 
+  const hasStrategies = await db.schema.hasTable('user_strategies');
+  if (!hasStrategies) {
+    await db.schema.createTable('user_strategies', t => {
+      t.increments('id').primary();
+      t.integer('user_id').references('id').inTable('users').onDelete('CASCADE');
+      t.string('strategy_type').defaultTo('preset'); // preset | text | document
+      t.string('preset_key').nullable();             // conservative | balanced | growth | real_estate | abl | osfi_b20
+      t.text('plain_text').nullable();               // free-text strategy description
+      t.text('document_name').nullable();            // original filename
+      t.text('document_extracted').nullable();       // AI-extracted params JSON
+      t.text('override_params').nullable();          // merged final params JSON
+      t.timestamps(true, true);
+    });
+    console.log('  ✓ user_strategies');
+  }
+
+  // Expand SIC codes to full EDGAR list if still using minimal set
+  try {
+    const count = await db('sic_codes').count('sic_code as n').first();
+    if (Number(count.n) < 200) {
+      const sicExpansion = require('../db/seeds/sic-expansion');
+      await sicExpansion.run(db);
+    }
+  } catch (e) {
+    console.warn('  SIC expansion skipped:', e.message);
+  }
+
   console.log('Migrations complete.');
 }
 
 /* ── Seeds ──────────────────────────────────────────────── */
 async function runSeeds() {
-  const seeds = require('../db/seeds');
+  const seeds = require('../db/seeds/index-old');
   await seeds.run(db);
 }
 

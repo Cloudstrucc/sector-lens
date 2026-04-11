@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { OrgService, computeLoanParameters } = require('../services/OrgService');
+const { getUserStrategy } = require('./account');
 const router = express.Router();
 
 /* ── Source metadata builder ─────────────────────────────────────────────── */
@@ -111,7 +112,9 @@ router.get('/:id', async (req, res) => {
     if (!data) return res.status(404).render('error', { title: 'Not Found', code: 404, message: 'Organization not found.' });
 
     const sources = buildOrgSources(data.org);
-    const loanParams = computeLoanParameters(data.fin, data.org.sic_code);
+    const userId = req.session?.user?.id || null;
+    const userStrategy = await getUserStrategy(userId).catch(() => null);
+    const loanParams = computeLoanParameters(data.fin, data.org.sic_code, userStrategy);
 
     res.render('org-profile', {
       title: `${data.org.name} — SectorLens`,

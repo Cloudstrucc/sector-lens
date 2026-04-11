@@ -42,6 +42,7 @@ function parseValue(str, key) {
 /* GET /api/sics — full SIC code list for the browser modal */
 router.get('/sics', async (req, res) => {
   try {
+    // Base SIC list with entity counts
     const sics = await db('sic_codes as s')
       .leftJoin(
         db('organizations').select('sic_code').count('id as n').groupBy('sic_code').as('o'),
@@ -50,7 +51,62 @@ router.get('/sics', async (req, res) => {
       .select('s.sic_code', 's.name', 's.name_fr', 's.description',
               db.raw('COALESCE(o.n, s.entity_count, 0) as entity_count'))
       .orderBy('s.sic_code');
-    res.json(sics);
+
+    // Countries per SIC — distinct country_code grouped by sic_code
+    const countryRows = await db('organizations')
+      .select('sic_code', 'country_code')
+      .whereNotNull('country_code')
+      .groupBy('sic_code', 'country_code');
+
+    // Sources per SIC — distinct source_name grouped by sic_code
+    const sourceRows = await db('organizations')
+      .select('sic_code', 'source_name')
+      .whereNotNull('source_name')
+      .groupBy('sic_code', 'source_name');
+
+    // Build lookup maps
+    const countryMap = {};
+    for (const r of countryRows) {
+      if (!countryMap[r.sic_code]) countryMap[r.sic_code] = [];
+      if (!countryMap[r.sic_code].includes(r.country_code))
+        countryMap[r.sic_code].push(r.country_code);
+    }
+
+    // Shorten source names to acronyms for display
+    const SOURCE_LABELS = {
+      'SEC EDGAR XBRL':              'EDGAR',
+      'Bank of Canada':              'BoC',
+      'BANK_OF_CANADA':              'BoC',
+      'OSFI':                        'OSFI',
+      'FDIC BankFind':               'FDIC',
+      'FDIC':                        'FDIC',
+      'Financial Modeling Prep':     'FMP',
+      'FMP':                         'FMP',
+      'EBA':                         'EBA',
+      'PROPUBLICA_990':              'ProPublica',
+      'PROPUBLICA':                  'ProPublica',
+      'STATCAN':                     'StatsCan',
+      'GLEIF Global LEI':            'GLEIF',
+      'ECB European Institutions':   'ECB',
+      'World Bank / Global Institutions': 'World Bank',
+    };
+
+    const sourceMap = {};
+    for (const r of sourceRows) {
+      if (!sourceMap[r.sic_code]) sourceMap[r.sic_code] = [];
+      const label = SOURCE_LABELS[r.source_name] || r.source_name;
+      if (!sourceMap[r.sic_code].includes(label))
+        sourceMap[r.sic_code].push(label);
+    }
+
+    // Merge into SIC list
+    const result = sics.map(s => ({
+      ...s,
+      countries: countryMap[s.sic_code] || [],
+      sources:   sourceMap[s.sic_code]  || [],
+    }));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -109,18 +109,42 @@ class FmpAdapter extends BaseAdapter {
       for (const ticker of tickers) {
         if (totalOrgs >= maxOrgs) break;
         try {
-          // Get company profile (name, SIC, exchange, employees)
+          // Get company profile
           const profiles = await this.fetchWithRetry(
             `${FMP_BASE}/profile?symbol=${ticker}&apikey=${apiKey}`
           );
+
+          // Detect premium-only response
           if (!Array.isArray(profiles) || !profiles.length) continue;
+          if (profiles[0] && profiles[0]['Error Message']) {
+            this._log(`Skipping ${ticker} — not available on current FMP plan`);
+            continue;
+          }
+          if (typeof profiles[0] === 'string' && profiles[0].includes('subscription')) {
+            this._log(`Skipping ${ticker} — premium required`);
+            continue;
+          }
           const p = profiles[0];
+
+          // Skip non-US exchanges on free tier — TSX allowed if paid key detected
+          const exchange = p.exchange || p.exchangeFullName || '';
+          const isTSX = exchange.match(/TSX|Toronto/i);
+          const isPaid = process.env.FMP_PAID === 'true';
+          if (!exchange.match(/NASDAQ|NYSE|AMEX|OTC/i) && !(isTSX && isPaid)) {
+            this._log(`Skipping ${ticker} — exchange ${exchange} requires premium`);
+            continue;
+          }
 
           // Get income statement
           const stmts = await this.fetchWithRetry(
             `${FMP_BASE}/income-statement?symbol=${ticker}&limit=2&apikey=${apiKey}`
           );
-          const stmt = Array.isArray(stmts) && stmts.length ? stmts[0] : null;
+          if (!Array.isArray(stmts) || !stmts.length) continue;
+          if (stmts[0] && (stmts[0]['Error Message'] || (typeof stmts[0] === 'string' && stmts[0].includes('subscription')))) {
+            this._log(`Skipping ${ticker} financials — premium required`);
+            continue;
+          }
+          const stmt = stmts[0];
 
           const orgId = await this.upsertOrg({
             name:           p.companyName || ticker,

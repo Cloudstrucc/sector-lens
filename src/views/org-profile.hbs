@@ -145,8 +145,18 @@
         {{/each}}
       </div>
       <div class="banker-block">
-        <div class="banker-block-title">Indicative Loan Parameters</div>
+        <div class="banker-block-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Indicative Loan Parameters</span>
+          {{#if loanParams.strategyActive}}
+          <a href="/account/strategy" style="font-size:10px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;text-decoration:none;">Custom strategy ✓</a>
+          {{/if}}
+        </div>
         {{#if loanParams.hasData}}
+        {{#if loanParams.leverageWarning}}
+        <div style="padding:8px 10px;background:#fef2f2;border-radius:var(--r-md);font-size:11px;color:#991b1b;margin-bottom:10px;line-height:1.5;">
+          {{loanParams.leverageWarning}}
+        </div>
+        {{/if}}
         <div class="rec-box">
           <div class="rec-box-label">Max Loan (Indicative)</div>
           <div class="rec-box-val">{{loanParams.maxLoanFmt}}</div>

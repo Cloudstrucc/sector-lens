@@ -1,0 +1,291 @@
+<div class="page-body" x-data="strategyApp()" x-init="init()">
+  <div class="breadcrumb">
+    <a href="/">Home</a> ›
+    <a href="/account">My Account</a> ›
+    <span>Lending Strategy</span>
+  </div>
+
+  <div style="max-width:720px;">
+    <h1 style="font-family:'Cormorant Garant',serif;font-size:28px;font-weight:600;margin-bottom:6px;">Lending Strategy</h1>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:28px;line-height:1.6;">
+      Define how SectorLens interprets credit analysis for your institution. Your strategy overrides the default parameters in the Indicative Loan Parameters panel and Detailed Analysis modal on every org profile.
+    </p>
+
+    {{#if saved}}
+    <div style="padding:10px 14px;background:#dcfce7;border-radius:var(--r-md);font-size:13px;color:#166534;margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+      <span>✓</span> Strategy saved successfully — your loan analysis panels will reflect these parameters.
+    </div>
+    {{/if}}
+
+    {{!-- Current strategy banner --}}
+    {{#if strategy}}
+    <div style="padding:12px 16px;background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:2px;">Current strategy</div>
+        <div style="font-size:14px;font-weight:500;">
+          {{#if (eq strategy.strategy_type 'preset')}}{{strategy.preset_key}}{{/if}}
+          {{#if (eq strategy.strategy_type 'text')}}Custom (plain text){{/if}}
+          {{#if (eq strategy.strategy_type 'document')}}Document: {{strategy.document_name}}{{/if}}
+        </div>
+        {{#if strategy.document_extracted}}
+        <div style="font-size:12px;color:var(--text-3);margin-top:3px;">
+          AI summary: {{strategy.document_extracted}}
+        </div>
+        {{/if}}
+      </div>
+      <form method="POST" action="/account/strategy/reset">
+        <button type="submit" class="btn btn-outline btn-sm" style="font-size:12px;">Reset to default</button>
+      </form>
+    </div>
+    {{/if}}
+
+    {{!-- Tab switcher --}}
+    <div style="display:flex;gap:6px;margin-bottom:24px;">
+      <button @click="tab='preset'"
+              :class="tab==='preset' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'">
+        Pre-built strategy
+      </button>
+      <button @click="tab='text'"
+              :class="tab==='text' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'">
+        Plain language
+      </button>
+      <button @click="tab='document'"
+              :class="tab==='document' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm'">
+        Upload document
+      </button>
+    </div>
+
+    {{!-- TAB 1: Pre-built strategies --}}
+    <div x-show="tab==='preset'">
+      <form method="POST" action="/account/strategy">
+        <input type="hidden" name="strategy_type" value="preset">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+          {{#each presets}}
+          <label style="cursor:pointer;">
+            <input type="radio" name="preset_key" value="{{key}}"
+                   {{#if (eq ../strategy.preset_key key)}}checked{{/if}}
+                   style="display:none;" class="preset-radio">
+            <div class="preset-card" data-key="{{key}}"
+                 style="border:1.5px solid var(--border);border-radius:var(--r-md);padding:14px 16px;transition:border-color .15s;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:4px;">{{label}}</div>
+              <div style="font-size:12px;color:var(--text-3);margin-bottom:8px;line-height:1.5;">{{description}}</div>
+              <div style="font-size:11px;color:var(--text-3);line-height:1.6;border-top:0.5px solid var(--border);padding-top:8px;">{{details}}</div>
+              <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;">
+                {{#if params.dscr_min}}<span style="font-size:10px;padding:2px 6px;background:#eff6ff;color:#1d4ed8;border-radius:3px;">DSCR ≥{{params.dscr_min}}×</span>{{/if}}
+                {{#if params.leverage_max}}<span style="font-size:10px;padding:2px 6px;background:#f0fdf4;color:#166534;border-radius:3px;">Max {{params.leverage_max}}× leverage</span>{{/if}}
+                {{#if params.covenant}}<span style="font-size:10px;padding:2px 6px;background:#faf5ff;color:#6b21a8;border-radius:3px;">{{params.covenant}}</span>{{/if}}
+              </div>
+            </div>
+          </label>
+          {{/each}}
+        </div>
+        <button type="submit" class="btn btn-primary">Save strategy</button>
+      </form>
+    </div>
+
+    {{!-- TAB 2: Plain language --}}
+    <div x-show="tab==='text'">
+      <p style="font-size:13px;color:var(--text-3);margin-bottom:14px;line-height:1.6;">
+        Describe your institution's lending strategy in plain language. Claude will extract the key parameters (DSCR floor, max leverage, covenant preference, etc.) and apply them to your loan analysis.
+      </p>
+      <textarea id="plain-text-input" style="width:100%;border:0.5px solid var(--border);border-radius:var(--r-md);padding:12px;font-size:13px;resize:vertical;min-height:160px;background:var(--bg);color:var(--text);line-height:1.6;"
+        placeholder="e.g. We focus on mid-market manufacturing companies in the $10M–$100M revenue range. Our minimum DSCR is 1.5× and we require maintenance covenants with quarterly reporting. Maximum leverage is 4× EBITDA. We prefer 7-year terms with 15-year amortization for equipment-backed deals...">{{#if strategy.plain_text}}{{strategy.plain_text}}{{/if}}</textarea>
+
+      <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+        <button @click="analyzeText()" :disabled="analyzing"
+                class="btn btn-primary" style="font-size:13px;">
+          <span x-show="!analyzing">Analyze with Claude →</span>
+          <span x-show="analyzing">Analyzing…</span>
+        </button>
+        <span style="font-size:12px;color:var(--text-3);">Claude will extract parameters and save your strategy</span>
+      </div>
+
+      <div x-show="textResult" style="margin-top:16px;padding:14px;background:var(--bg-alt);border-radius:var(--r-md);border:0.5px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Extracted parameters</div>
+        <div style="font-size:12px;color:var(--text-2);margin-bottom:10px;" x-text="textResult.summary"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" x-show="textResult.params">
+          <template x-if="textResult.params?.dscr_min">
+            <span style="font-size:11px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;" x-text="'DSCR ≥ ' + textResult.params.dscr_min + '×'"></span>
+          </template>
+          <template x-if="textResult.params?.leverage_max">
+            <span style="font-size:11px;padding:2px 7px;background:#f0fdf4;color:#166534;border-radius:3px;" x-text="'Max ' + textResult.params.leverage_max + '× leverage'"></span>
+          </template>
+          <template x-if="textResult.params?.covenant">
+            <span style="font-size:11px;padding:2px 7px;background:#faf5ff;color:#6b21a8;border-radius:3px;" x-text="textResult.params.covenant + ' covenants'"></span>
+          </template>
+          <template x-if="textResult.params?.amort_max">
+            <span style="font-size:11px;padding:2px 7px;background:#fff7ed;color:#9a3412;border-radius:3px;" x-text="textResult.params.amort_max + 'yr max amort'"></span>
+          </template>
+        </div>
+        <div x-show="textResult.params?.notes" style="margin-top:8px;font-size:11px;color:var(--text-3);" x-text="textResult.params?.notes"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);">
+          <a href="/account/strategy?saved=1" style="font-size:12px;color:var(--green);">✓ Strategy saved — view org profiles to see updated parameters</a>
+        </div>
+      </div>
+
+      <div x-show="textError" style="margin-top:12px;font-size:12px;color:var(--warn);" x-text="textError"></div>
+    </div>
+
+    {{!-- TAB 3: Document upload --}}
+    <div x-show="tab==='document'">
+      <p style="font-size:13px;color:var(--text-3);margin-bottom:14px;line-height:1.6;">
+        Upload your institution's credit policy, underwriting guidelines, or strategy memo. Claude will read the document and extract the relevant lending parameters automatically.
+      </p>
+
+      <div id="drop-zone"
+           @dragover.prevent="dragOver=true"
+           @dragleave="dragOver=false"
+           @drop.prevent="handleDrop($event)"
+           :style="dragOver ? 'border-color:var(--blue);background:#eff6ff;' : ''"
+           style="border:1.5px dashed var(--border);border-radius:var(--r-md);padding:32px;text-align:center;cursor:pointer;transition:all .15s;"
+           @click="$refs.fileInput.click()">
+        <div style="font-size:28px;margin-bottom:10px;">📄</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px;" x-text="uploadedFile ? uploadedFile.name : 'Drop file here or click to browse'"></div>
+        <div style="font-size:12px;color:var(--text-3);">Supported: .docx, .pdf, .md, .txt · Max 5MB</div>
+        <input type="file" x-ref="fileInput" accept=".docx,.pdf,.md,.txt,.xlsx"
+               style="display:none;" @change="handleFileSelect($event)">
+      </div>
+
+      <div x-show="uploadedFile" style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+        <button @click="uploadFile()" :disabled="uploading" class="btn btn-primary" style="font-size:13px;">
+          <span x-show="!uploading">Analyze with Claude →</span>
+          <span x-show="uploading">Analyzing document…</span>
+        </button>
+        <span style="font-size:12px;color:var(--text-3);" x-text="uploadedFile ? uploadedFile.name : ''"></span>
+      </div>
+
+      <div x-show="uploadProgress" style="margin-top:12px;">
+        <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;">
+          <div style="height:100%;background:var(--blue);transition:width .3s;" :style="'width:' + uploadProgress + '%'"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:4px;" x-text="uploadStatus"></div>
+      </div>
+
+      <div x-show="uploadResult" style="margin-top:16px;padding:14px;background:var(--bg-alt);border-radius:var(--r-md);border:0.5px solid var(--border);">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Extracted from document</div>
+        <div style="font-size:12px;color:var(--text-2);margin-bottom:10px;" x-text="uploadResult?.summary"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <template x-if="uploadResult?.params?.dscr_min">
+            <span style="font-size:11px;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border-radius:3px;" x-text="'DSCR ≥ ' + uploadResult.params.dscr_min + '×'"></span>
+          </template>
+          <template x-if="uploadResult?.params?.leverage_max">
+            <span style="font-size:11px;padding:2px 7px;background:#f0fdf4;color:#166534;border-radius:3px;" x-text="'Max ' + uploadResult.params.leverage_max + '× leverage'"></span>
+          </template>
+          <template x-if="uploadResult?.params?.covenant">
+            <span style="font-size:11px;padding:2px 7px;background:#faf5ff;color:#6b21a8;border-radius:3px;" x-text="uploadResult.params.covenant + ' covenants'"></span>
+          </template>
+          <template x-if="uploadResult?.params?.amort_max">
+            <span style="font-size:11px;padding:2px 7px;background:#fff7ed;color:#9a3412;border-radius:3px;" x-text="uploadResult.params.amort_max + 'yr max amort'"></span>
+          </template>
+          <template x-if="uploadResult?.params?.notes">
+            <span style="font-size:11px;padding:2px 7px;background:#f1f5f9;color:#334155;border-radius:3px;" x-text="uploadResult.params.notes"></span>
+          </template>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);">
+          <a href="/account/strategy?saved=1" style="font-size:12px;color:var(--green);">✓ Strategy saved — view org profiles to see updated parameters</a>
+        </div>
+      </div>
+
+      <div x-show="uploadError" style="margin-top:12px;font-size:12px;color:var(--warn);" x-text="uploadError"></div>
+    </div>
+
+    {{!-- Reference box --}}
+    <div style="margin-top:32px;padding:16px;background:var(--bg-alt);border-radius:var(--r-md);border-left:3px solid var(--blue);">
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;">How strategies affect analysis</div>
+      <div style="font-size:12px;color:var(--text-3);line-height:1.7;">
+        Your strategy overrides the default DSCR thresholds, leverage limits, and covenant preferences in the loan engine. For example, choosing <strong>OSFI B-20 Compliant</strong> raises the minimum DSCR threshold to 1.75× (from the default 1.5×), which will change the rate tier and covenant recommendations for borderline credits.<br><br>
+        <strong>Document uploads</strong> are processed by Claude Sonnet which reads your credit policy and extracts numerical parameters. Review the extracted values before relying on them for client presentations.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function strategyApp() {
+  return {
+    tab:            '{{#if strategy}}{{strategy.strategy_type}}{{else}}preset{{/if}}',
+    analyzing:      false,
+    textResult:     null,
+    textError:      '',
+    uploadedFile:   null,
+    uploading:      false,
+    uploadProgress: 0,
+    uploadStatus:   '',
+    uploadResult:   null,
+    uploadError:    '',
+    dragOver:       false,
+
+    init() {
+      // Highlight selected preset card
+      document.querySelectorAll('.preset-radio').forEach(r => {
+        const card = r.closest('label').querySelector('.preset-card');
+        if (r.checked) card.style.borderColor = 'var(--blue)';
+        r.addEventListener('change', () => {
+          document.querySelectorAll('.preset-card').forEach(c => c.style.borderColor = 'var(--border)');
+          if (r.checked) card.style.borderColor = 'var(--blue)';
+        });
+      });
+      document.querySelectorAll('.preset-card').forEach(c => {
+        c.addEventListener('click', () => {
+          const radio = c.closest('label').querySelector('.preset-radio');
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change'));
+        });
+      });
+    },
+
+    async analyzeText() {
+      const text = document.getElementById('plain-text-input').value.trim();
+      if (!text || text.length < 10) { this.textError = 'Please enter a strategy description.'; return; }
+      this.analyzing = true; this.textResult = null; this.textError = '';
+      try {
+        const resp = await fetch('/account/strategy/analyze-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) { this.textError = data.error || 'Analysis failed.'; }
+        else           { this.textResult = data.extracted; }
+      } catch (e) {
+        this.textError = 'Network error — please try again.';
+      }
+      this.analyzing = false;
+    },
+
+    handleFileSelect(e) {
+      this.uploadedFile = e.target.files[0] || null;
+      this.uploadResult = null; this.uploadError = '';
+    },
+
+    handleDrop(e) {
+      this.dragOver = false;
+      this.uploadedFile = e.dataTransfer.files[0] || null;
+      this.uploadResult = null; this.uploadError = '';
+    },
+
+    async uploadFile() {
+      if (!this.uploadedFile) return;
+      this.uploading = true; this.uploadProgress = 10; this.uploadStatus = 'Uploading…';
+      this.uploadResult = null; this.uploadError = '';
+
+      const fd = new FormData();
+      fd.append('file', this.uploadedFile);
+
+      try {
+        this.uploadProgress = 30; this.uploadStatus = 'Extracting text…';
+        const resp = await fetch('/account/strategy/upload', { method: 'POST', body: fd });
+        this.uploadProgress = 80; this.uploadStatus = 'Claude is analyzing…';
+        const data = await resp.json();
+        this.uploadProgress = 100; this.uploadStatus = 'Done';
+        if (!resp.ok) { this.uploadError = data.error || 'Upload failed.'; }
+        else           { this.uploadResult = data.extracted; }
+      } catch (e) {
+        this.uploadError = 'Network error — please try again.';
+      }
+      this.uploading = false;
+    },
+  };
+}
+</script>

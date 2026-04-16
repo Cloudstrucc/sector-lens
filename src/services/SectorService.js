@@ -47,6 +47,7 @@ function fmt(val, format) {
   }
   if (format === 'percent') return Number(val).toFixed(2) + '%';
   if (format === 'ratio')   return Number(val).toFixed(2) + '×';
+  if (format === 'decimal') return Number(val).toFixed(2);
   return val;
 }
 

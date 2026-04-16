@@ -71,20 +71,35 @@
     {{/if}}
   </div>
 
-  {{!-- KPI TILES --}}
-  <div class="section-head"><h2>Key Financial Metrics</h2><span>FY 2023 · vs Sector Median</span></div>
-  <div class="kpi-grid">
-    {{#each kpis}}
-    <div class="kpi-card {{accentClass}}">
-      <div class="kpi-label">{{label}}</div>
-      <div class="kpi-value">{{value}}</div>
-      <div class="kpi-vs">vs sector <strong>{{sectorMedian}}</strong></div>
-      <div class="kpi-delta {{trend}}">
-        {{#if (eq trend 'pos')}}↑ Above Median{{else}}{{#if (eq trend 'neg')}}↓ Below Median{{else}}— At Median{{/if}}{{/if}}
-      </div>
+  {{!-- KPI TILES — Categorised by underwriter benchmark group --}}
+  <div class="section-head"><h2>Key Financial Metrics</h2><span>FY {{finYear}} · vs Sector Median</span></div>
+
+  {{#each categorisedKPIs}}
+  <div style="margin-bottom:28px;">
+    <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      {{label}}
     </div>
-    {{/each}}
+    <div class="kpi-grid">
+      {{#each items}}
+      <div class="kpi-card {{accentClass}}">
+        <div class="kpi-label">
+          {{label}}
+          {{#if note}}<span style="font-size:9px;color:var(--text-3);margin-left:4px;">{{note}}</span>{{/if}}
+        </div>
+        <div class="kpi-value">{{value}}</div>
+        <div class="kpi-vs">vs sector <strong>{{sectorMedian}}</strong></div>
+        <div class="kpi-delta {{trend}}">
+          {{#if breach}}
+            {{#if (eq breach 'below-floor')}}⚠ Below floor{{else}}⚠ Above ceiling{{/if}}
+          {{else}}
+            {{#if (eq trend 'pos')}}↑ Above Median{{else}}{{#if (eq trend 'neg')}}↓ Below Median{{else}}— At Median{{/if}}{{/if}}
+          {{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
   </div>
+  {{/each}}
 
   {{!-- TREND CHARTS --}}
   <div class="section-head"><h2>Financial Trends</h2><span>5-Year History</span></div>
@@ -137,10 +152,18 @@
     <div class="banker-grid">
       <div class="banker-block">
         <div class="banker-block-title">Key Risk Indicators</div>
-        {{#each kpis}}
-        <div class="risk-item">
-          <div class="risk-dot {{#if (eq trend 'pos')}}dot-green{{else}}{{#if (eq trend 'neg')}}dot-warn{{else}}dot-neu{{/if}}{{/if}}"></div>
-          <span>{{label}}: <strong>{{value}}</strong> (sector median: {{sectorMedian}})</span>
+        {{#each categorisedKPIs}}
+        <div style="margin-bottom:10px;">
+          <div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);font-weight:500;margin-bottom:4px;">{{label}}</div>
+          {{#each items}}
+          <div class="risk-item">
+            <div class="risk-dot {{#if breach}}dot-warn{{else}}{{#if (eq trend 'pos')}}dot-green{{else}}{{#if (eq trend 'neg')}}dot-warn{{else}}dot-neu{{/if}}{{/if}}{{/if}}"></div>
+            <span>{{label}}: <strong>{{value}}</strong>
+              {{#if breach}}<span style="color:var(--warn);font-size:10px;"> ⚠</span>{{/if}}
+              <span style="color:var(--text-3);font-size:11px;"> (sector: {{sectorMedian}})</span>
+            </span>
+          </div>
+          {{/each}}
         </div>
         {{/each}}
       </div>

@@ -213,6 +213,60 @@ async function runMigrations() {
     console.log('  ✓ user_strategies');
   }
 
+  // ── New underwriter benchmark columns — safe ALTER TABLE additions ─────────
+  const finCols = await db('financials').columnInfo().catch(() => ({}));
+
+  const newFinCols = [
+    // Cash Flow Statement
+    { col: 'operating_cash_flow',  type: 'decimal' },
+    { col: 'capex',                type: 'decimal' },
+    { col: 'free_cash_flow',       type: 'decimal' },
+    // Balance Sheet — Liquidity
+    { col: 'current_assets',       type: 'decimal' },
+    { col: 'current_liabilities',  type: 'decimal' },
+    { col: 'accounts_receivable',  type: 'decimal' },
+    { col: 'inventory',            type: 'decimal' },
+    { col: 'long_term_debt',       type: 'decimal' },
+    { col: 'intangibles',          type: 'decimal' },
+    { col: 'goodwill',             type: 'decimal' },
+    // Income Statement extras
+    { col: 'interest_expense',     type: 'decimal' },
+    { col: 'tax_expense',          type: 'decimal' },
+    { col: 'ebit',                 type: 'decimal' },
+    // Computed ratios — stored for benchmarking
+    { col: 'current_ratio',        type: 'decimal' },
+    { col: 'quick_ratio',          type: 'decimal' },
+    { col: 'interest_coverage',    type: 'decimal' },
+    { col: 'fccr',                 type: 'decimal' },
+    { col: 'dscr',                 type: 'decimal' },
+    { col: 'net_debt',             type: 'decimal' },
+    { col: 'net_debt_to_ebitda',   type: 'decimal' },
+    { col: 'tangible_net_worth',   type: 'decimal' },
+    { col: 'debt_to_tangible_nw',  type: 'decimal' },
+    { col: 'dso',                  type: 'decimal' },
+    { col: 'inventory_turnover',   type: 'decimal' },
+    { col: 'asset_turnover',       type: 'decimal' },
+    { col: 'cash_conversion_cycle',type: 'decimal' },
+    { col: 'fcf_to_debt',          type: 'decimal' },
+    { col: 'payout_ratio',         type: 'decimal' },
+    { col: 'altman_z',             type: 'decimal' },
+    { col: 'funded_debt_ratio',    type: 'decimal' },
+  ];
+
+  for (const { col } of newFinCols) {
+    if (!finCols[col]) {
+      await db.schema.table('financials', t => { t.decimal(col, 20, 4).nullable(); });
+      console.log(`  ✓ financials.${col}`);
+    }
+  }
+
+  // ── Add category column to sector_benchmarks for grouping ─────────────────
+  const bmCols = await db('sector_benchmarks').columnInfo().catch(() => ({}));
+  if (!bmCols.category) {
+    await db.schema.table('sector_benchmarks', t => { t.string('category').nullable(); });
+    console.log('  ✓ sector_benchmarks.category');
+  }
+
   // Expand SIC codes to full EDGAR list if still using minimal set
   try {
     const count = await db('sic_codes').count('sic_code as n').first();
@@ -229,7 +283,7 @@ async function runMigrations() {
 
 /* ── Seeds ──────────────────────────────────────────────── */
 async function runSeeds() {
-  const seeds = require('../db/seeds/index-old');
+  const seeds = require('../db/seeds');
   await seeds.run(db);
 }
 

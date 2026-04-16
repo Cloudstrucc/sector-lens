@@ -109,7 +109,69 @@ const OrgService = {
       .orderBy('f.revenue', 'desc')
       .limit(5);
 
+    // ── Enrich fin with computed ratios ───────────────────────────────────────
+    if (fin) {
+      const f = fin;
+      const rev  = f.revenue            || 0;
+      const ni   = f.net_income         || 0;
+      const ebit = f.ebit               || f.operating_income || 0;
+      const ebitda = f.ebitda           || (ni > 0 ? ni * 1.35 : 0);
+      const td   = f.total_debt         || 0;
+      const cash = f.cash_and_equivalents || 0;
+      const ta   = f.total_assets       || 0;
+      const tl   = f.total_liabilities  || 0;
+      const eq   = f.shareholders_equity || (ta - tl) || 0;
+      const ca   = f.current_assets     || 0;
+      const cl   = f.current_liabilities|| 0;
+      const ar   = f.accounts_receivable|| 0;
+      const inv  = f.inventory          || 0;
+      const intang = (f.intangibles || 0) + (f.goodwill || 0);
+      const capex  = f.capex            || 0;
+      const ocf    = f.operating_cash_flow || 0;
+      const int_exp = f.interest_expense || (td > 0 ? td * 0.05 : 1);
+      const cogs   = f.cogs             || 0;
+      const ltd    = f.long_term_debt   || td;
+
+      // Liquidity
+      if (!f.current_ratio  && cl > 0) f.current_ratio  = +(ca / cl).toFixed(2);
+      if (!f.quick_ratio    && cl > 0) f.quick_ratio    = +((ca - inv) / cl).toFixed(2);
+      // Coverage
+      if (!f.interest_coverage && int_exp > 0) f.interest_coverage = +(ebit / int_exp).toFixed(2);
+      const annualDebtSvc = int_exp + (td * 0.08);
+      if (!f.dscr && annualDebtSvc > 0) f.dscr = +(ni / annualDebtSvc).toFixed(2);
+      if (!f.fccr && annualDebtSvc > 0) f.fccr = +((ebitda - capex) / annualDebtSvc).toFixed(2);
+      // Leverage
+      if (!f.net_debt)          f.net_debt          = td - cash;
+      if (!f.net_debt_to_ebitda && ebitda > 0) f.net_debt_to_ebitda = +((td - cash) / ebitda).toFixed(2);
+      if (!f.tangible_net_worth) f.tangible_net_worth = eq - intang;
+      if (!f.debt_to_tangible_nw && (eq - intang) > 0) f.debt_to_tangible_nw = +(td / (eq - intang)).toFixed(2);
+      if (!f.funded_debt_ratio  && (td + eq) > 0) f.funded_debt_ratio = +(ltd / (ltd + eq) * 100).toFixed(1);
+      // Efficiency
+      if (!f.asset_turnover && ta > 0) f.asset_turnover = +(rev / ta).toFixed(2);
+      if (!f.dso && rev > 0) f.dso = +(ar / rev * 365).toFixed(1);
+      if (!f.inventory_turnover && inv > 0) f.inventory_turnover = +(cogs / inv).toFixed(2);
+      const dpo = tl > 0 ? (tl / (cogs || rev) * 365) : 0;
+      if (!f.cash_conversion_cycle && rev > 0) f.cash_conversion_cycle = +((ar/rev*365) + (inv > 0 ? inv/(cogs||rev)*365 : 0) - dpo).toFixed(1);
+      // Cash flow
+      if (!f.free_cash_flow && ocf) f.free_cash_flow = ocf - capex;
+      if (!f.fcf_to_debt && td > 0 && f.free_cash_flow) f.fcf_to_debt = +(f.free_cash_flow / td * 100).toFixed(1);
+      // Altman Z-Score (public company version)
+      if (!f.altman_z && ta > 0) {
+        const wc  = ca - cl;
+        const re  = eq - (f.total_assets > 0 ? f.total_assets * 0.3 : 0); // proxy retained earnings
+        const mve = eq;                                                      // book value proxy
+        f.altman_z = +(
+          1.2  * (wc / ta) +
+          1.4  * (re / ta) +
+          3.3  * (ebit / ta) +
+          0.6  * (mve / Math.max(tl, 1)) +
+          1.0  * (rev / ta)
+        ).toFixed(2);
+      }
+    }
+
     const kpis = fin ? buildKPIs(fin, benchMap, org.sic_code) : [];
+    const categorisedKPIs = fin ? buildCategorisedKPIs(fin, benchMap, org.sic_code) : [];
 
     // ── Chart data ────────────────────────────────────────────────────────────
     const chartTrend = {
@@ -135,6 +197,7 @@ const OrgService = {
       finYear,
       isManual: org.type === 'Manual',
       kpis,
+      categorisedKPIs,
       trend,
       chartTrend,
       peers: peers.map(p => ({
@@ -161,36 +224,122 @@ const OrgService = {
 };
 
 function buildKPIs(fin, benchMap, sic) {
-  const defs = [
-    { key: 'revenue',              label: 'Revenue',           format: 'currency', trend: 'higher' },
-    { key: 'net_income',           label: 'Net Income',         format: 'currency', trend: 'higher' },
-    { key: 'net_margin',           label: 'Net Margin',         format: 'percent',  trend: 'higher' },
-    { key: 'roe',                  label: 'Return on Equity',   format: 'percent',  trend: 'higher' },
-    { key: 'total_assets',         label: 'Total Assets',       format: 'currency', trend: 'higher' },
-    { key: 'debt_to_equity',       label: 'Debt / Equity',      format: 'ratio',    trend: 'lower'  },
-    { key: 'tier1_capital_ratio',  label: 'Tier 1 Capital',     format: 'percent',  trend: 'higher' },
-    { key: 'efficiency_ratio',     label: 'Efficiency Ratio',   format: 'percent',  trend: 'lower'  },
-    { key: 'gross_margin',         label: 'Gross Margin',       format: 'percent',  trend: 'higher' },
-    { key: 'operating_margin',     label: 'Operating Margin',   format: 'percent',  trend: 'higher' },
+  // ── Categorised benchmark definitions for underwriters ────────────────────
+  const CATEGORIES = [
+    {
+      key:   'profitability',
+      label: 'Profitability',
+      defs: [
+        { key: 'revenue',          label: 'Revenue',          format: 'currency', trend: 'higher' },
+        { key: 'net_income',       label: 'Net Income',       format: 'currency', trend: 'higher' },
+        { key: 'gross_margin',     label: 'Gross Margin',     format: 'percent',  trend: 'higher' },
+        { key: 'operating_margin', label: 'Operating Margin', format: 'percent',  trend: 'higher' },
+        { key: 'net_margin',       label: 'Net Margin',       format: 'percent',  trend: 'higher' },
+        { key: 'roe',              label: 'Return on Equity', format: 'percent',  trend: 'higher' },
+        { key: 'roa',              label: 'Return on Assets', format: 'percent',  trend: 'higher' },
+        { key: 'ebitda',           label: 'EBITDA',           format: 'currency', trend: 'higher' },
+      ],
+    },
+    {
+      key:   'coverage',
+      label: 'Debt Service & Coverage',
+      defs: [
+        { key: 'dscr',             label: 'DSCR',                    format: 'ratio',   trend: 'higher', floor: 1.25, note: 'OCC 2023-1 minimum' },
+        { key: 'fccr',             label: 'Fixed Charge Coverage',   format: 'ratio',   trend: 'higher', floor: 1.20, note: 'OSFI B-6' },
+        { key: 'interest_coverage',label: 'Interest Coverage',       format: 'ratio',   trend: 'higher', floor: 2.50, note: 'Min 2.5×' },
+        { key: 'fcf_to_debt',      label: 'FCF / Total Debt',        format: 'percent', trend: 'higher' },
+        { key: 'net_debt_to_ebitda',label:'Net Debt / EBITDA',       format: 'ratio',   trend: 'lower',  ceiling: 4.0, note: 'Basel III senior limit' },
+      ],
+    },
+    {
+      key:   'leverage',
+      label: 'Leverage & Capital',
+      defs: [
+        { key: 'debt_to_equity',   label: 'Debt / Equity',          format: 'ratio',   trend: 'lower'  },
+        { key: 'debt_to_tangible_nw',label:'Debt / Tangible NW',    format: 'ratio',   trend: 'lower'  },
+        { key: 'funded_debt_ratio',label: 'Funded Debt Ratio',       format: 'percent', trend: 'lower'  },
+        { key: 'tangible_net_worth',label:'Tangible Net Worth',      format: 'currency',trend: 'higher' },
+        { key: 'tier1_capital_ratio',label:'Tier 1 Capital',         format: 'percent', trend: 'higher' },
+        { key: 'altman_z',         label: 'Altman Z-Score',          format: 'decimal', trend: 'higher', floor: 1.81, note: '<1.81 distress zone' },
+      ],
+    },
+    {
+      key:   'liquidity',
+      label: 'Liquidity',
+      defs: [
+        { key: 'current_ratio',    label: 'Current Ratio',          format: 'ratio',   trend: 'higher', floor: 1.20, note: 'Min 1.2×' },
+        { key: 'quick_ratio',      label: 'Quick Ratio',            format: 'ratio',   trend: 'higher', floor: 1.00, note: 'Min 1.0×' },
+        { key: 'cash_and_equivalents',label:'Cash & Equivalents',   format: 'currency',trend: 'higher' },
+        { key: 'net_debt',         label: 'Net Debt',               format: 'currency',trend: 'lower'  },
+      ],
+    },
+    {
+      key:   'efficiency',
+      label: 'Efficiency & Asset Quality',
+      defs: [
+        { key: 'efficiency_ratio', label: 'Efficiency Ratio',       format: 'percent', trend: 'lower'  },
+        { key: 'asset_turnover',   label: 'Asset Turnover',         format: 'ratio',   trend: 'higher' },
+        { key: 'dso',              label: 'Days Sales Outstanding',  format: 'decimal', trend: 'lower',  note: 'Days' },
+        { key: 'inventory_turnover',label:'Inventory Turnover',     format: 'ratio',   trend: 'higher' },
+        { key: 'cash_conversion_cycle',label:'Cash Conversion Cycle',format:'decimal', trend: 'lower',  note: 'Days' },
+      ],
+    },
+    {
+      key:   'cashflow',
+      label: 'Cash Flow',
+      defs: [
+        { key: 'operating_cash_flow',label:'Operating Cash Flow',   format: 'currency',trend: 'higher' },
+        { key: 'capex',             label: 'Capital Expenditure',    format: 'currency',trend: 'neutral' },
+        { key: 'free_cash_flow',    label: 'Free Cash Flow',         format: 'currency',trend: 'higher' },
+        { key: 'payout_ratio',      label: 'Payout Ratio',           format: 'percent', trend: 'lower'  },
+      ],
+    },
   ];
 
-  // Only show KPIs that have either a value OR a benchmark
-  return defs
-    .filter(d => fin[d.key] != null || benchMap[d.key])
-    .map(d => {
-      const val   = fin[d.key];
-      const bench = benchMap[d.key];
-      const above = bench && val != null
-        ? (d.trend === 'higher' ? val >= bench.median : val <= bench.median)
-        : null;
-      return {
-        label:        d.label,
-        value:        fmt(val, d.format),
-        sectorMedian: bench ? fmt(bench.median, d.format) : '—',
-        trend:        above == null ? 'neu' : above ? 'pos' : 'neg',
-        accentClass:  above == null ? 'accent-neu' : above ? 'accent-pos' : 'accent-warn',
-      };
-    });
+  // Build flat KPI list (backwards-compatible with existing template)
+  const kpis = [];
+  for (const cat of CATEGORIES) {
+    const catKpis = cat.defs
+      .filter(d => fin[d.key] != null || benchMap[d.key])
+      .map(d => {
+        const val   = fin[d.key];
+        const bench = benchMap[d.key];
+        let above = null;
+        if (bench && val != null) {
+          above = d.trend === 'higher' ? val >= bench.median : d.trend === 'lower' ? val <= bench.median : null;
+        }
+        // Flag breach of regulatory floors/ceilings
+        let breach = null;
+        if (d.floor   != null && val != null && val < d.floor)   breach = 'below-floor';
+        if (d.ceiling != null && val != null && val > d.ceiling) breach = 'above-ceiling';
+
+        return {
+          category:     cat.key,
+          categoryLabel:cat.label,
+          label:        d.label,
+          value:        fmt(val, d.format),
+          rawValue:     val,
+          sectorMedian: bench ? fmt(bench.median, d.format) : '—',
+          trend:        above == null ? 'neu' : above ? 'pos' : 'neg',
+          accentClass:  breach ? 'accent-neg' : above == null ? 'accent-neu' : above ? 'accent-pos' : 'accent-warn',
+          note:         d.note || null,
+          breach,
+        };
+      });
+    if (catKpis.length > 0) kpis.push(...catKpis);
+  }
+  return kpis;
+}
+
+// Categorised KPIs for grouped display in template
+function buildCategorisedKPIs(fin, benchMap, sic) {
+  const all = buildKPIs(fin, benchMap, sic);
+  const map = {};
+  for (const kpi of all) {
+    if (!map[kpi.category]) map[kpi.category] = { label: kpi.categoryLabel, items: [] };
+    map[kpi.category].items.push(kpi);
+  }
+  return Object.values(map);
 }
 
 
